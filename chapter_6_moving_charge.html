@@ -1,0 +1,604 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 6: Moving Charge | الفصل السادس: الشحنة المتحركة</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- MathJax for rendering equations -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <!-- JSConfetti for celebration animation -->
+    <script src="https://cdn.jsdelivr.net/npm/js-confetti@latest/dist/js-confetti.browser.js"></script>
+    <style>
+        body {
+            background-image: url('https://www.transparenttextures.com/patterns/circuit.png');
+            background-color: #f0f4f8;
+            transition: background-color 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        }
+        .dark-mode {
+            background-color: #1f2937;
+            color: #e5e7eb;
+        }
+        .dark-mode .bg-white {
+            background-color: #374151;
+        }
+        .dark-mode .bg-blue-50 {
+            background-color: #4b5563;
+        }
+        .dark-mode .text-blue-900 {
+            color: #93c5fd;
+        }
+        .dark-mode .text-gray-800 {
+            color: #d1d5db;
+        }
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .mcq-option {
+            padding: 10px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        .mcq-option:hover {
+            background-color: #e2e8f0;
+            cursor: pointer;
+            transform: scale(1.02);
+        }
+        .dark-mode .mcq-option:hover {
+            background-color: #4b5563;
+        }
+        .selected-correct {
+            background-color: #d1fae5;
+            border: 2px solid #15803d;
+            font-weight: 600;
+        }
+        .selected-incorrect {
+            background-color: #fee2e2;
+            border: 2px solid #b91c1c;
+            font-weight: 600;
+        }
+        .correct {
+            color: #15803d;
+            font-weight: bold;
+        }
+        .incorrect {
+            color: #b91c1c;
+            font-weight: bold;
+        }
+        .correct-answer {
+            color: #1d4ed8;
+            font-weight: bold;
+        }
+        .fade-in {
+            animation: fadeIn 1s ease-in-out;
+        }
+        .fade-in-feedback {
+            animation: fadeInFeedback 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeInFeedback {
+            0% { opacity: 0; transform: translateY(5px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 220px;
+            background-color: #1f2937;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -110px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        .progress-bar {
+            height: 12px;
+            background-color: #e5e7eb;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background-color: #3b82f6;
+            transition: width 0.3s ease;
+        }
+        .charge-icon::before {
+            content: '⚡️';
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        .next-button {
+            transition: all 0.2s ease;
+        }
+        .next-button:hover {
+            transform: translateX(4px);
+        }
+        .resource-link:hover {
+            text-decoration: underline;
+            color: #1d4ed8;
+        }
+        .dark-mode .resource-link:hover {
+            color: #93c5fd;
+        }
+    </style>
+</head>
+<body class="font-sans text-gray-800">
+    <!-- Header -->
+    <header class="bg-blue-900 text-white py-4 sticky-header">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold">Physics: Moving Charge | الفيزياء: الشحنة المتحركة</h1>
+            <nav class="flex items-center space-x-4">
+                <a href="#explanation" class="px-2 hover:underline" aria-label="Jump to Explanation Section">Explanation | الشرح</a>
+                <a href="#resources" class="px-2 hover:underline" aria-label="Jump to Resources Section">Resources | الموارد</a>
+                <a href="#mcqs" class="px-2 hover:underline" aria-label="Jump to MCQs Section">MCQs | الأسئلة</a>
+                <button id="theme-toggle" class="px-2 py-1 bg-blue-700 rounded hover:bg-blue-600" aria-label="Toggle Dark Mode">Dark Mode</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8">
+        <section id="explanation" class="bg-white rounded-lg shadow-lg p-6 mb-8 fade-in">
+            <h2 class="text-3xl font-semibold text-blue-900 mb-4 charge-icon">Chapter 6: Moving Charge | الفصل السادس: الشحنة المتحركة</h2>
+            <p class="mb-4">Moving charges create electric currents, which are fundamental to electrical circuits and devices. This chapter covers electric current, current density, drift velocity, resistance, and Ohm’s law.</p>
+            <p class="mb-4">الشحنات المتحركة تولد تيارات كهربائية، وهي أساسية للدوائر والأجهزة الكهربائية. يتناول هذا الفصل التيار الكهربائي، كثافة التيار، سرعة الانجراف، المقاومة، وقانون أوم.</p>
+
+            <h3 class="text-2xl font-semibold text-gray-800 mb-3 charge-icon">Electric Current | التيار الكهربائي</h3>
+            <p class="mb-2">Electric current (\( I \)) is the rate of flow of electric charge through a conductor:</p>
+            <p class="mb-2">التيار الكهربائي (\( I \)) هو معدل تدفق الشحنة الكهربائية عبر موصل:</p>
+            <div class="bg-blue-50 p-4 rounded-lg text-center my-4">
+                \[ I = \frac{dQ}{dt} \]
+            </div>
+            <p>Unit: Ampere (A), where \( 1 \, \text{A} = 1 \, \text{C}/\text{s} \).</p>
+            <p>الوحدة: أمبير (A)، حيث \( 1 \, \text{A} = 1 \, \text{C}/\text{s} \).</p>
+
+            <h3 class="text-2xl font-semibold text-gray-800 mb-3 charge-icon">Current Density | كثافة التيار</h3>
+            <p class="mb-2">Current density (\( \mathbf{J} \)) is the current per unit area perpendicular to the flow:</p>
+            <p class="mb-2">كثافة التيار (\( \mathbf{J} \)) هي التيار لكل وحدة مساحة عمودية على التدفق:</p>
+            <div class="bg-blue-50 p-4 rounded-lg text-center my-4">
+                \[ \mathbf{J} = \frac{I}{A} \]
+            </div>
+            <p>Unit: \( \text{A}/\text{m}^2 \).</p>
+            <p>الوحدة: \( \text{أمبير}/\text{م}^2 \).</p>
+
+            <h3 class="text-2xl font-semibold text-gray-800 mb-3 charge-icon">Drift Velocity | سرعة الانجراف</h3>
+            <p class="mb-2">Drift velocity (\( \mathbf{v}_d \)) is the average velocity of charge carriers in a conductor:</p>
+            <p class="mb-2">سرعة الانجراف (\( \mathbf{v}_d \)) هي السرعة المتوسطة لحاملات الشحنة في موصل:</p>
+            <div class="bg-blue-50 p-4 rounded-lg text-center my-4">
+                \[ \mathbf{J} = n q \mathbf{v}_d \]
+                <div class="tooltip"><span class="underline">\( n \)</span><span class="tooltip-text">Charge carrier density (number per \( \text{m}^3 \)) | كثافة حاملات الشحنة (العدد لكل \( \text{م}^3 \))</span></div>
+            </div>
+            <p>Drift velocity is typically very small (e.g., \( 10^{-4} \, \text{m}/\text{s} \)).</p>
+            <p>سرعة الانجراف عادةً صغيرة جدًا (مثل \( 10^{-4} \, \text{م}/\text{ث} \)).</p>
+
+            <h3 class="text-2xl font-semibold text-gray-800 mb-3 charge-icon">Resistance and Resistivity | المقاومة والمقاومية</h3>
+            <p class="mb-2">Resistance (\( R \)) measures opposition to current flow:</p>
+            <p class="mb-2">المقاومة (\( R \)) تقيس معارضة تدفق التيار:</p>
+            <div class="bg-blue-50 p-4 rounded-lg text-center my-4">
+                \[ R = \rho \frac{L}{A} \]
+                <div class="tooltip"><span class="underline">\(\rho\)</span><span class="tooltip-text">Resistivity (\( \Omega \cdot \text{m} \)) | المقاومية (\( \Omega \cdot \text{م} \))</span></div>
+            </div>
+            <p>Resistivity (\( \rho \)) is a material property, increasing with temperature for metals.</p>
+            <p>المقاومية (\( \rho \)) هي خاصية المادة، وتزداد مع ارتفاع درجة الحرارة للمعادن.</p>
+
+            <h3 class="text-2xl font-semibold text-gray-800 mb-3 charge-icon">Ohm’s Law | قانون أوم</h3>
+            <p class="mb-2">Ohm’s law relates voltage (\( V \)), current (\( I \)), and resistance (\( R \)):</p>
+            <p class="mb-2">قانون أوم يربط الجهد (\( V \))، التيار (\( I \))، والمقاومة (\( R \)):</p>
+            <div class="bg-blue-50 p-4 rounded-lg text-center my-4">
+                \[ V = I R \]
+            </div>
+            <p>Unit: Volt (V), where \( 1 \, \text{V} = 1 \, \text{J}/\text{C} \).</p>
+            <p>الوحدة: فولت (V)، حيث \( 1 \, \text{V} = 1 \, \text{J}/\text{C} \).</p>
+
+            <h3 class="text-2xl font-semibold text-gray-800 mb-3 charge-icon">Applications | التطبيقات</h3>
+            <p class="mb-2">Moving charges are key to electrical circuits, power transmission, and devices like resistors.</p>
+            <p class="mb-2">الشحنات المتحركة أساسية للدوائر الكهربائية، نقل الطاقة، والأجهزة مثل المقاومات.</p>
+        </section>
+
+        <!-- Resources Section -->
+        <section id="resources" class="bg-white rounded-lg shadow-lg p-6 mb-8 fade-in">
+            <h2 class="text-3xl font-semibold text-blue-900 mb-4 charge-icon">Resources | الموارد</h2>
+            <p class="mb-4">Explore additional materials to deepen your understanding of moving charges.</p>
+            <p class="mb-4">استكشف مواد إضافية لتعميق فهمك للشحنات المتحركة.</p>
+            <ul class="space-y-2">
+                <li>
+                    <span class="inline-block mr-2">📄</span>
+                    <a href="https://drive.google.com/file/d/1n335ceNDeYpDOwxs81nTAKLi91CsUd0X/view?usp=drivesdk" target="_blank" class="resource-link text-blue-600">Summary | ملخص الفصل السادس</a>
+                </li>
+                <li>
+                    <span class="inline-block mr-2">🎥</span>
+                    <a href="https://youtu.be/iuOEZsecyeM?si=mMrtF8sfNn40vUQX" target="_blank" class="resource-link text-blue-600">Video: Electric Current and Drift Velocity | فيديو: التيار الكهربائي وسرعة الانجراف</a>
+                </li>
+                <li>
+                    <span class="inline-block mr-2">🎥</span>
+                    <a href="https://youtu.be/pShvKp8wAr8?si=6lLG9ezRrLEkHqqV" target="_blank" class="resource-link text-blue-600">Video: Resistance and Ohm’s Law | فيديو: المقاومة وقانون أوم</a>
+                </li>
+            </ul>
+        </section>
+
+        <section id="mcqs" class="bg-white rounded-lg shadow-lg p-6 fade-in">
+            <h2 class="text-3xl font-semibold text-blue-900 mb-4 charge-icon">Multiple Choice Questions (MCQs) | أسئلة الاختيار المتعدد</h2>
+            <div class="mb-6">
+                <p class="font-semibold">Progress: <span id="progress">0</span>/10</p>
+                <div class="progress-bar">
+                    <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%;"></div>
+                </div>
+                <p class="font-semibold mt-2">Score: <span id="score">0</span>/10 (<span id="percentage">0</span>%)</p>
+                <p id="quiz-feedback" class="mt-2 font-semibold text-lg"></p>
+                <div class="mt-4 flex space-x-2">
+                    <button id="submit-quiz" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition" aria-label="Submit Quiz">Submit Quiz | إرسال الاختبار</button>
+                    <button id="reset-quiz" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition" aria-label="Reset Quiz">Reset Quiz | إعادة الاختبار</button>
+                </div>
+            </div>
+            <div class="space-y-8">
+                <div class="mcq" id="mcq-1">
+                    <p class="font-semibold text-lg">1. The unit of electric current is: | وحدة التيار الكهربائي هي:</p>
+                    <div class="options space-y-2" id="options-1">
+                        <p class="mcq-option" onclick="selectAnswer(1, 'A')" role="button" tabindex="0">A) Coulomb | كولوم</p>
+                        <p class="mcq-option" onclick="selectAnswer(1, 'B')" role="button" tabindex="0">B) Ampere | أمبير</p>
+                        <p class="mcq-option" onclick="selectAnswer(1, 'C')" role="button" tabindex="0">C) Volt | فولت</p>
+                        <p class="mcq-option" onclick="selectAnswer(1, 'D')" role="button" tabindex="0">D) Ohm | أوم</p>
+                    </div>
+                    <p id="feedback-1" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(2)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-2">
+                    <p class="font-semibold text-lg">2. Current density is defined as: | تُعرف كثافة التيار بأنها:</p>
+                    <div class="options space-y-2" id="options-2">
+                        <p class="mcq-option" onclick="selectAnswer(2, 'A')" role="button" tabindex="0">A) \( \mathbf{J} = \frac{I}{A} \) | \( \mathbf{J} = \frac{I}{A} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(2, 'B')" role="button" tabindex="0">B) \( \mathbf{J} = I A \) | \( \mathbf{J} = I A \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(2, 'C')" role="button" tabindex="0">C) \( \mathbf{J} = \frac{A}{I} \) | \( \mathbf{J} = \frac{A}{I} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(2, 'D')" role="button" tabindex="0">D) \( \mathbf{J} = \frac{I}{L} \) | \( \mathbf{J} = \frac{I}{L} \)</p>
+                    </div>
+                    <p id="feedback-2" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(3)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-3">
+                    <p class="font-semibold text-lg">3. Drift velocity is: | سرعة الانجراف هي:</p>
+                    <div class="options space-y-2" id="options-3">
+                        <p class="mcq-option" onclick="selectAnswer(3, 'A')" role="button" tabindex="0">A) The maximum velocity of electrons | السرعة القصوى للإلكترونات</p>
+                        <p class="mcq-option" onclick="selectAnswer(3, 'B')" role="button" tabindex="0">B) The average velocity of charge carriers | السرعة المتوسطة لحاملات الشحنة</p>
+                        <p class="mcq-option" onclick="selectAnswer(3, 'C')" role="button" tabindex="0">C) The velocity of electrons without an electric field | سرعة الإلكترونات بدون مجال كهربائي</p>
+                        <p class="mcq-option" onclick="selectAnswer(3, 'D')" role="button" tabindex="0">D) The speed of light | سرعة الضوء</p>
+                    </div>
+                    <p id="feedback-3" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(4)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-4">
+                    <p class="font-semibold text-lg">4. The relationship between current density and drift velocity is: | العلاقة بين كثافة التيار وسرعة الانجراف هي:</p>
+                    <div class="options space-y-2" id="options-4">
+                        <p class="mcq-option" onclick="selectAnswer(4, 'A')" role="button" tabindex="0">A) \( \mathbf{J} = n q \mathbf{v}_d \) | \( \mathbf{J} = n q \mathbf{v}_d \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(4, 'B')" role="button" tabindex="0">B) \( \mathbf{J} = \frac{n q}{\mathbf{v}_d} \) | \( \mathbf{J} = \frac{n q}{\mathbf{v}_d} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(4, 'C')" role="button" tabindex="0">C) \( \mathbf{J} = \frac{\mathbf{v}_d}{n q} \) | \( \mathbf{J} = \frac{\mathbf{v}_d}{n q} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(4, 'D')" role="button" tabindex="0">D) \( \mathbf{J} = n q \mathbf{v}_d^2 \) | \( \mathbf{J} = n q \mathbf{v}_d^2 \)</p>
+                    </div>
+                    <p id="feedback-4" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(5)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-5">
+                    <p class="font-semibold text-lg">5. The unit of resistivity is: | وحدة المقاومية هي:</p>
+                    <div class="options space-y-2" id="options-5">
+                        <p class="mcq-option" onclick="selectAnswer(5, 'A')" role="button" tabindex="0">A) Ohm-meter | أوم-متر</p>
+                        <p class="mcq-option" onclick="selectAnswer(5, 'B')" role="button" tabindex="0">B) Ohm per meter | أوم لكل متر</p>
+                        <p class="mcq-option" onclick="selectAnswer(5, 'C')" role="button" tabindex="0">C) Meter per ohm | متر لكل أوم</p>
+                        <p class="mcq-option" onclick="selectAnswer(5, 'D')" role="button" tabindex="0">D) Ohm | أوم</p>
+                    </div>
+                    <p id="feedback-5" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(6)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-6">
+                    <p class="font-semibold text-lg">6. Which factor does not affect the resistance of a wire? | أي عامل لا يؤثر على مقاومة السلك؟</p>
+                    <div class="options space-y-2" id="options-6">
+                        <p class="mcq-option" onclick="selectAnswer(6, 'A')" role="button" tabindex="0">A) Length | الطول</p>
+                        <p class="mcq-option" onclick="selectAnswer(6, 'B')" role="button" tabindex="0">B) Cross-sectional area | المساحة المقطعية</p>
+                        <p class="mcq-option" onclick="selectAnswer(6, 'C')" role="button" tabindex="0">C) Material | المادة</p>
+                        <p class="mcq-option" onclick="selectAnswer(6, 'D')" role="button" tabindex="0">D) Color | اللون</p>
+                    </div>
+                    <p id="feedback-6" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(7)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-7">
+                    <p class="font-semibold text-lg">7. The resistance of a wire is given by: | مقاومة السلك تُعطى بـ:</p>
+                    <div class="options space-y-2" id="options-7">
+                        <p class="mcq-option" onclick="selectAnswer(7, 'A')" role="button" tabindex="0">A) \( R = \rho \frac{L}{A} \) | \( R = \rho \frac{L}{A} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(7, 'B')" role="button" tabindex="0">B) \( R = \rho \frac{A}{L} \) | \( R = \rho \frac{A}{L} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(7, 'C')" role="button" tabindex="0">C) \( R = \frac{L}{\rho A} \) | \( R = \frac{L}{\rho A} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(7, 'D')" role="button" tabindex="0">D) \( R = \frac{A}{\rho L} \) | \( R = \frac{A}{\rho L} \)</p>
+                    </div>
+                    <p id="feedback-7" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(8)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-8">
+                    <p class="font-semibold text-lg">8. According to Ohm’s law, the voltage across a resistor is: | وفقًا لقانون أوم، الجهد عبر المقاومة هو:</p>
+                    <div class="options space-y-2" id="options-8">
+                        <p class="mcq-option" onclick="selectAnswer(8, 'A')" role="button" tabindex="0">A) \( V = I R \) | \( V = I R \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(8, 'B')" role="button" tabindex="0">B) \( V = \frac{I}{R} \) | \( V = \frac{I}{R} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(8, 'C')" role="button" tabindex="0">C) \( V = \frac{R}{I} \) | \( V = \frac{R}{I} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(8, 'D')" role="button" tabindex="0">D) \( V = I + R \) | \( V = I + R \)</p>
+                    </div>
+                    <p id="feedback-8" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(9)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-9">
+                    <p class="font-semibold text-lg">9. If a wire’s length is doubled and its cross-sectional area is halved, the resistance: | إذا تضاعف طول السلك وتناصف مساحته المقطعية، فإن المقاومة:</p>
+                    <div class="options space-y-2" id="options-9">
+                        <p class="mcq-option" onclick="selectAnswer(9, 'A')" role="button" tabindex="0">A) Remains the same | تبقى كما هي</p>
+                        <p class="mcq-option" onclick="selectAnswer(9, 'B')" role="button" tabindex="0">B) Doubles | تتضاعف</p>
+                        <p class="mcq-option" onclick="selectAnswer(9, 'C')" role="button" tabindex="0">C) Quadruples | تتضاعف أربع مرات</p>
+                        <p class="mcq-option" onclick="selectAnswer(9, 'D')" role="button" tabindex="0">D) Is halved | تنخفض إلى النصف</p>
+                    </div>
+                    <p id="feedback-9" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(10)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-10">
+                    <p class="font-semibold text-lg">10. If the voltage across a 4 Ω resistor is 12 V, the current is: | إذا كان الجهد عبر مقاومة 4 أوم 12 فولت، فإن التيار هو:</p>
+                    <div class="options space-y-2" id="options-10">
+                        <p class="mcq-option" onclick="selectAnswer(10, 'A')" role="button" tabindex="0">A) 3 A | 3 أمبير</p>
+                        <p class="mcq-option" onclick="selectAnswer(10, 'B')" role="button" tabindex="0">B) 4 A | 4 أمبير</p>
+                        <p class="mcq-option" onclick="selectAnswer(10, 'C')" role="button" tabindex="0">C) 12 A | 12 أمبير</p>
+                        <p class="mcq-option" onclick="selectAnswer(10, 'D')" role="button" tabindex="0">D) 0.33 A | 0.33 أمبير</p>
+                    </div>
+                    <p id="feedback-10" class="mt-3 fade-in-feedback"></p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-blue-900 text-white py-4">
+        <div class="container mx-auto px-4 text-center">
+            <p>Learn more about physics at <a href="https://www.physicsclassroom.com/" class="underline hover:text-blue-300" aria-label="Visit The Physics Classroom">The Physics Classroom</a></p>
+            <p>© 2025 Physics Education. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript for Grading System and Interactivity -->
+    <script>
+        const jsConfetti = new JSConfetti();
+        let score = 0;
+        let answeredQuestions = new Set();
+        const totalQuestions = 10;
+        const correctAnswers = {
+            1: 'B',
+            2: 'A',
+            3: 'B',
+            4: 'A',
+            5: 'A',
+            6: 'D',
+            7: 'A',
+            8: 'A',
+            9: 'C',
+            10: 'A'
+        };
+        const explanations = {
+            1: 'The unit of electric current is ampere (A), where \( 1 \, \text{A} = 1 \, \text{C}/\text{s} \). | وحدة التيار الكهربائي هي أمبير (A)، حيث \( 1 \, \text{A} = 1 \, \text{C}/\text{s} \).',
+            2: 'Current density is defined as \( \mathbf{J} = \\frac{I}{A} \), the current per unit area. | كثافة التيار تُعرف بـ \( \mathbf{J} = \\frac{I}{A} \)، التيار لكل وحدة مساحة.',
+            3: 'Drift velocity is the average velocity of charge carriers under an electric field. | سرعة الانجراف هي السرعة المتوسطة لحاملات الشحنة تحت تأثير مجال كهربائي.',
+            4: 'The relationship is \( \mathbf{J} = n q \mathbf{v}_d \), where \( n \) is the carrier density and \( q \) is the charge. | العلاقة هي \( \mathbf{J} = n q \mathbf{v}_d \)، حيث \( n \) هي كثافة الحاملات و\( q \) هي الشحنة.',
+            5: 'The unit of resistivity is ohm-meter (\( \Omega \cdot \text{m} \)), a material property. | وحدة المقاومية هي أوم-متر (\( \Omega \cdot \text{م} \))، وهي خاصية المادة.',
+            6: 'The color of a wire does not affect its resistance; length, area, and material do. | لون السلك لا يؤثر على المقاومة؛ الطول، المساحة، والمادة تؤثر.',
+            7: 'Resistance is given by \( R = \\rho \\frac{L}{A} \), where \( \rho \) is resistivity. | المقاومة تُعطى بـ \( R = \\rho \\frac{L}{A} \)، حيث \( \rho \) هي المقاومية.',
+            8: 'Ohm’s law states \( V = I R \), relating voltage, current, and resistance. | قانون أوم ينص على \( V = I R \)، يربط الجهد، التيار، والمقاومة.',
+            9: 'If length doubles (\( L \to 2L \)) and area halves (\( A \to A/2 \)), resistance becomes \( R = \\rho \\frac{2L}{A/2} = 4R \). | إذا تضاعف الطول (\( L \to 2L \)) وتناصفت المساحة (\( A \to A/2 \))، تصبح المقاومة \( R = \\rho \\frac{2L}{A/2} = 4R \).',
+            10: 'Using Ohm’s law, \( I = \\frac{V}{R} = \\frac{12}{4} = 3 \, \text{A} \). | باستخدام قانون أوم، \( I = \\frac{V}{R} = \\frac{12}{4} = 3 \, \text{أمبير} \).'
+        };
+        const correctAnswerText = {
+            1: 'B) Ampere | أمبير',
+            2: 'A) \( \mathbf{J} = \\frac{I}{A} \) | \( \mathbf{J} = \\frac{I}{A} \)',
+            3: 'B) The average velocity of charge carriers | السرعة المتوسطة لحاملات الشحنة',
+            4: 'A) \( \mathbf{J} = n q \mathbf{v}_d \) | \( \mathbf{J} = n q \mathbf{v}_d \)',
+            5: 'A) Ohm-meter | أوم-متر',
+            6: 'D) Color | اللون',
+            7: 'A) \( R = \\rho \\frac{L}{A} \) | \( R = \\rho \\frac{L}{A} \)',
+            8: 'A) \( V = I R \) | \( V = I R \)',
+            9: 'C) Quadruples | تتضاعف أربع مرات',
+            10: 'A) 3 A | 3 أمبير'
+        };
+
+        // Load saved progress
+        function loadProgress() {
+            const savedAnswers = JSON.parse(localStorage.getItem('movingChargeQuizAnswers')) || {};
+            score = 0;
+            answeredQuestions = new Set();
+            Object.keys(savedAnswers).forEach(qNum => {
+                const questionNumber = parseInt(qNum);
+                const selectedOption = savedAnswers[qNum];
+                answeredQuestions.add(questionNumber);
+                const feedbackElement = document.getElementById(`feedback-${questionNumber}`);
+                const options = document.getElementById(`options-${questionNumber}`).getElementsByClassName('mcq-option');
+                const nextButton = document.getElementById(`mcq-${questionNumber}`).querySelector('.next-button');
+                for (let option of options) {
+                    if (option.textContent.startsWith(selectedOption + ')')) {
+                        option.classList.add(selectedOption === correctAnswers[questionNumber] ? 'selected-correct' : 'selected-incorrect');
+                    }
+                }
+                if (selectedOption === correctAnswers[questionNumber]) {
+                    score++;
+                    feedbackElement.innerHTML = `<span class="correct">Correct! | صحيح!</span> ${explanations[questionNumber]}`;
+                } else {
+                    feedbackElement.innerHTML = `<span class="incorrect">Incorrect. | غير صحيح.</span> The correct answer is: <span class="correct-answer">${correctAnswerText[questionNumber]}</span>. ${explanations[questionNumber]}`;
+                }
+                if (nextButton && questionNumber < totalQuestions) {
+                    nextButton.classList.remove('hidden');
+                }
+            });
+            updateProgress();
+        }
+
+        function selectAnswer(questionNumber, selectedOption) {
+            if (answeredQuestions.has(questionNumber)) return; // Prevent answering twice
+            answeredQuestions.add(questionNumber);
+            const feedbackElement = document.getElementById(`feedback-${questionNumber}`);
+            const options = document.getElementById(`options-${questionNumber}`).getElementsByClassName('mcq-option');
+            const nextButton = document.getElementById(`mcq-${questionNumber}`).querySelector('.next-button');
+            for (let option of options) {
+                if (option.textContent.startsWith(selectedOption + ')')) {
+                    option.classList.add(selectedOption === correctAnswers[questionNumber] ? 'selected-correct' : 'selected-incorrect');
+                }
+            }
+            if (selectedOption === correctAnswers[questionNumber]) {
+                score++;
+                feedbackElement.innerHTML = `<span class="correct">Correct! | صحيح!</span> ${explanations[questionNumber]}`;
+            } else {
+                feedbackElement.innerHTML = `<span class="incorrect">Incorrect. | غير صحيح.</span> The correct answer is: <span class="correct-answer">${correctAnswerText[questionNumber]}</span>. ${explanations[questionNumber]}`;
+            }
+            if (nextButton && questionNumber < totalQuestions) {
+                nextButton.classList.remove('hidden');
+            }
+            localStorage.setItem('movingChargeQuizAnswers', JSON.stringify({
+                ...JSON.parse(localStorage.getItem('movingChargeQuizAnswers') || '{}'),
+                [questionNumber]: selectedOption
+            }));
+            updateProgress();
+        }
+
+        function scrollToNext(questionNumber) {
+            const nextMcq = document.getElementById(`mcq-${questionNumber}`);
+            if (nextMcq) {
+                nextMcq.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function updateProgress() {
+            const progress = answeredQuestions.size;
+            const percentage = Math.round((score / totalQuestions) * 100);
+            document.getElementById('progress').textContent = progress;
+            document.getElementById('score').textContent = score;
+            document.getElementById('percentage').textContent = percentage;
+            document.getElementById('progress-bar-fill').style.width = `${(progress / totalQuestions) * 100}%`;
+        }
+
+        function submitQuiz() {
+            if (answeredQuestions.size < totalQuestions) {
+                document.getElementById('quiz-feedback').textContent = 'Please answer all questions before submitting. | الرجاء الإجابة على جميع الأسئلة قبل الإرسال.';
+                return;
+            }
+            const percentage = Math.round((score / totalQuestions) * 100);
+            let feedback;
+            if (percentage >= 80) {
+                feedback = 'Excellent! You have a strong grasp of moving charges. | ممتاز! لديك فهم قوي للشحنات المتحركة.';
+                jsConfetti.addConfetti();
+            } else if (percentage >= 50) {
+                feedback = 'Good job! Review some concepts to improve. | عمل جيد! راجع بعض المفاهيم لتحسين درجاتك.';
+            } else {
+                feedback = 'Try again! Focus on reviewing the key concepts. | حاول مرة أخرى! ركز على مراجعة المفاهيم الأساسية.';
+            }
+            document.getElementById('quiz-feedback').textContent = feedback;
+            document.getElementById('submit-quiz').disabled = true;
+        }
+
+        function resetQuiz() {
+            localStorage.removeItem('movingChargeQuizAnswers');
+            score = 0;
+            answeredQuestions.clear();
+            for (let i = 1; i <= totalQuestions; i++) {
+                document.getElementById(`feedback-${i}`).textContent = '';
+                const options = document.getElementById(`options-${i}`).getElementsByClassName('mcq-option');
+                const nextButton = document.getElementById(`mcq-${i}`).querySelector('.next-button');
+                for (let option of options) {
+                    option.classList.remove('selected-correct', 'selected-incorrect');
+                }
+                if (nextButton) {
+                    nextButton.classList.add('hidden');
+                }
+            }
+            document.getElementById('progress').textContent = '0';
+            document.getElementById('score').textContent = '0';
+            document.getElementById('percentage').textContent = '0';
+            document.getElementById('progress-bar-fill').style.width = '0%';
+            document.getElementById('quiz-feedback').textContent = '';
+            document.getElementById('submit-quiz').disabled = false;
+        }
+
+        // Theme Toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            themeToggle.textContent = document.body.classList.contains('dark-mode') ? 'Light Mode' : 'Dark Mode';
+        });
+
+        // Submit Quiz
+        document.getElementById('submit-quiz').addEventListener('click', submitQuiz);
+
+        // Reset Quiz
+        document.getElementById('reset-quiz').addEventListener('click', resetQuiz);
+
+        // Keyboard Navigation
+        document.querySelectorAll('.mcq-option').forEach(option => {
+            option.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    option.click();
+                }
+            });
+        });
+
+        // Load saved progress on page load
+        window.onload = loadProgress;
+    </script>
+</body>
+</html>

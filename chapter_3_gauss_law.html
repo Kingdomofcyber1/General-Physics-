@@ -1,0 +1,582 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 3: Gauss's Law | الفصل الثالث: قانون جاوس</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- MathJax for rendering equations -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <!-- JSConfetti for celebration animation -->
+    <script src="https://cdn.jsdelivr.net/npm/js-confetti@latest/dist/js-confetti.browser.js"></script>
+    <style>
+        body {
+            background-image: url('https://www.transparenttextures.com/patterns/circuit.png');
+            background-color: #f0f4f8;
+            transition: background-color 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        }
+        .dark-mode {
+            background-color: #1f2937;
+            color: #e5e7eb;
+        }
+        .dark-mode .bg-white {
+            background-color: #374151;
+        }
+        .dark-mode .bg-blue-50 {
+            background-color: #4b5563;
+        }
+        .dark-mode .text-blue-900 {
+            color: #93c5fd;
+        }
+        .dark-mode .text-gray-800 {
+            color: #d1d5db;
+        }
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .mcq-option {
+            padding: 10px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        .mcq-option:hover {
+            background-color: #e2e8f0;
+            cursor: pointer;
+            transform: scale(1.02);
+        }
+        .dark-mode .mcq-option:hover {
+            background-color: #4b5563;
+        }
+        .selected-correct {
+            background-color: #d1fae5;
+            border: 2px solid #15803d;
+            font-weight: 600;
+        }
+        .selected-incorrect {
+            background-color: #fee2e2;
+            border: 2px solid #b91c1c;
+            font-weight: 600;
+        }
+        .correct {
+            color: #15803d;
+            font-weight: bold;
+        }
+        .incorrect {
+            color: #b91c1c;
+            font-weight: bold;
+        }
+        .correct-answer {
+            color: #1d4ed8;
+            font-weight: bold;
+        }
+        .fade-in {
+            animation: fadeIn 1s ease-in-out;
+        }
+        .fade-in-feedback {
+            animation: fadeInFeedback 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeInFeedback {
+            0% { opacity: 0; transform: translateY(5px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 220px;
+            background-color: #1f2937;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -110px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        .progress-bar {
+            height: 12px;
+            background-color: #e5e7eb;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background-color: #3b82f6;
+            transition: width 0.3s ease;
+        }
+        .charge-icon::before {
+            content: '⚡️';
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        .next-button {
+            transition: all 0.2s ease;
+        }
+        .next-button:hover {
+            transform: translateX(4px);
+        }
+        .resource-link:hover {
+            text-decoration: underline;
+            color: #1d4ed8;
+        }
+        .dark-mode .resource-link:hover {
+            color: #93c5fd;
+        }
+    </style>
+</head>
+<body class="font-sans text-gray-800">
+    <!-- Header -->
+    <header class="bg-blue-900 text-white py-4 sticky-header">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold">Physics: Gauss's Law | الفيزياء: قانون جاوس</h1>
+            <nav class="flex items-center space-x-4">
+                <a href="#explanation" class="px-2 hover:underline" aria-label="Jump to Explanation Section">Explanation | الشرح</a>
+                <a href="#resources" class="px-2 hover:underline" aria-label="Jump to Resources Section">Resources | الموارد</a>
+                <a href="#mcqs" class="px-2 hover:underline" aria-label="Jump to MCQs Section">MCQs | الأسئلة</a>
+                <button id="theme-toggle" class="px-2 py-1 bg-blue-700 rounded hover:bg-blue-600" aria-label="Toggle Dark Mode">Dark Mode</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8">
+        <section id="explanation" class="bg-white rounded-lg shadow-lg p-6 mb-8 fade-in">
+            <h2 class="text-3xl font-semibold text-blue-900 mb-4 charge-icon">Chapter 3: Gauss's Law | الفصل الثالث: قانون جاوس</h2>
+            <p class="mb-4">Gauss's Law is a fundamental principle in electrostatics that relates the electric flux through a closed surface to the total charge enclosed by that surface. It is one of Maxwell's equations and provides a powerful tool for calculating electric fields in situations with high symmetry.</p>
+            <p class="mb-4">قانون جاوس هو مبدأ أساسي في الكهروستاتيكا يربط التدفق الكهربائي عبر سطح مغلق بالشحنة الكلية المحصورة داخل هذا السطح. وهو أحد معادلات ماكسويل ويوفر أداة قوية لحساب المجالات الكهربائية في الحالات ذات التماثل العالي.</p>
+
+            <h3 class="text-2xl font-semibold text-gray-800 mb-3 charge-icon">Gauss's Law | قانون جاوس</h3>
+            <p class="mb-2">Gauss's Law states that the total electric flux through a closed surface is proportional to the total charge enclosed:</p>
+            <p class="mb-2">ينص قانون جاوس على أن التدفق الكهربائي الكلي عبر سطح مغلق يتناسب مع الشحنة الكلية المحصورة:</p>
+            <div class="bg-blue-50 p-4 rounded-lg text-center my-4">
+                \[ \Phi_E = \oint \mathbf{E} \cdot d\mathbf{A} = \frac{Q_{\text{enc}}}{\epsilon_0} \]
+                <div class="tooltip"><span class="underline">\(\epsilon_0\)</span><span class="tooltip-text">ثابت السماحية: \( 8.85 \times 10^{-12} \, \text{C}^2/\text{N} \cdot \text{m}^2 \)</span></div>
+            </div>
+            <p>where \( \Phi_E \) is the electric flux, \( \mathbf{E} \) is the electric field, \( d\mathbf{A} \) is the area element, \( Q_{\text{enc}} \) is the enclosed charge, and \( \epsilon_0 \) is the permittivity of free space.</p>
+            <p>حيث \( \Phi_E \) هو التدفق الكهربائي، \( \mathbf{E} \) هو المجال الكهربائي، \( d\mathbf{A} \) هو عنصر المساحة، \( Q_{\text{enc}} \) هي الشحنة المحصورة، و\( \epsilon_0 \) هي سماحية الفراغ.</p>
+
+            <h3 class="text-2xl font-semibold text-gray-800 mb-3 charge-icon">Electric Flux | التدفق الكهربائي</h3>
+            <p class="mb-2">Electric flux measures the number of electric field lines passing through a surface:</p>
+            <p class="mb-2">يقيس التدفق الكهربائي عدد خطوط المجال الكهربائي التي تمر عبر سطح:</p>
+            <div class="bg-blue-50 p-4 rounded-lg text-center my-4">
+                \[ \Phi_E = \mathbf{E} \cdot \mathbf{A} = E A \cos \theta \]
+            </div>
+            <p>where \( \theta \) is the angle between the electric field and the normal to the surface.</p>
+            <p>حيث \( \theta \) هي الزاوية بين المجال الكهربائي والعمود على السطح.</p>
+
+            <h3 class="text-2xl font-semibold text-gray-800 mb-3 charge-icon">Applications of Gauss's Law | تطبيقات قانون جاوس</h3>
+            <ul class="list-disc pl-6 space-y-2">
+                <li><strong>Point Charge | شحنة نقطية:</strong> Electric field at distance \( r \): \( E = \frac{k q}{r^2} \).</li>
+                <li><strong>Line Charge | سلك مشحون:</strong> Electric field at distance \( r \): \( E = \frac{\lambda}{2\pi \epsilon_0 r} \), where \( \lambda \) is the linear charge density.</li>
+                <li><strong>Plane Sheet | صفيحة مشحونة:</strong> Electric field: \( E = \frac{\sigma}{2\epsilon_0} \), where \( \sigma \) is the surface charge density.</li>
+                <li><strong>Spherical Shell | قشرة كروية:</strong> Electric field inside is zero; outside: \( E = \frac{k Q}{r^2} \).</li>
+            </ul>
+            <ul class="list-disc pl-6 space-y-2">
+                <li><strong>شحنة نقطية:</strong> المجال الكهربائي على مسافة \( r \): \( E = \frac{k q}{r^2} \).</li>
+                <li><strong>سلك مشحون:</strong> المجال الكهربائي على مسافة \( r \): \( E = \frac{\lambda}{2\pi \epsilon_0 r} \)، حيث \( \lambda \) هي الكثافة الخطية للشحنة.</li>
+                <li><strong>صفيحة مشحونة:</strong> المجال الكهربائي: \( E = \frac{\sigma}{2\epsilon_0} \)، حيث \( \sigma \) هي كثافة الشحنة السطحية.</li>
+                <li><strong>قشرة كروية:</strong> المجال الكهربائي داخل القشرة صفر؛ خارج القشرة: \( E = \frac{k Q}{r^2} \).</li>
+            </ul>
+        </section>
+
+        <!-- Resources Section -->
+        <section id="resources" class="bg-white rounded-lg shadow-lg p-6 mb-8 fade-in">
+            <h2 class="text-3xl font-semibold text-blue-900 mb-4 charge-icon">Resources | الموارد</h2>
+            <p class="mb-4">Explore additional materials to deepen your understanding of Gauss's Law.</p>
+            <p class="mb-4">استكشف مواد إضافية لتعميق فهمك لقانون جاوس.</p>
+            <ul class="space-y-2">
+                <li>
+                    <span class="inline-block mr-2">📄</span>
+                    <a href="https://drive.google.com/file/d/1d0dda7wc90wV4oxIwdB3ZVmDSjXGb9tB/view?usp=drivesdk" target="_blank" class="resource-link text-blue-600">Summary | ملخص الفصل الثالث</a>
+                </li>
+                <li>
+                    <span class="inline-block mr-2">🎥</span>
+                    <a href="https://youtu.be/LO7zKCON2YI?si=ZJJ8E08g5NU2BcUH" target="_blank" class="resource-link text-blue-600">Video: Gauss's Law (First 20 Minutes) | فيديو: قانون جاوس (أول 20 دقيقة)</a>
+                </li>
+            </ul>
+        </section>
+
+        <section id="mcqs" class="bg-white rounded-lg shadow-lg p-6 fade-in">
+            <h2 class="text-3xl font-semibold text-blue-900 mb-4 charge-icon">Multiple Choice Questions (MCQs) | أسئلة الاختيار المتعدد</h2>
+            <div class="mb-6">
+                <p class="font-semibold">Progress: <span id="progress">0</span>/10</p>
+                <div class="progress-bar">
+                    <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%;"></div>
+                </div>
+                <p class="font-semibold mt-2">Score: <span id="score">0</span>/10 (<span id="percentage">0</span>%)</p>
+                <p id="quiz-feedback" class="mt-2 font-semibold text-lg"></p>
+                <div class="mt-4 flex space-x-2">
+                    <button id="submit-quiz" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition" aria-label="Submit Quiz">Submit Quiz | إرسال الاختبار</button>
+                    <button id="reset-quiz" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition" aria-label="Reset Quiz">Reset Quiz | إعادة الاختبار</button>
+                </div>
+            </div>
+            <div class="space-y-8">
+                <div class="mcq" id="mcq-1">
+                    <p class="font-semibold text-lg">1. Gauss's Law is used to: | يُستخدم قانون جاوس لـ:</p>
+                    <div class="options space-y-2" id="options-1">
+                        <p class="mcq-option" onclick="selectAnswer(1, 'A')" role="button" tabindex="0">A) Calculate the electric field in situations with high symmetry | حساب المجال الكهربائي في الحالات ذات التماثل العالي</p>
+                        <p class="mcq-option" onclick="selectAnswer(1, 'B')" role="button" tabindex="0">B) Determine the electric potential | تحديد الجهد الكهربائي</p>
+                        <p class="mcq-option" onclick="selectAnswer(1, 'C')" role="button" tabindex="0">C) Measure the electric charge | قياس الشحنة الكهربائية</p>
+                        <p class="mcq-option" onclick="selectAnswer(1, 'D')" role="button" tabindex="0">D) Calculate the magnetic field | حساب المجال المغناطيسي</p>
+                    </div>
+                    <p id="feedback-1" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(2)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-2">
+                    <p class="font-semibold text-lg">2. The electric flux through a closed surface is: | التدفق الكهربائي عبر سطح مغلق هو:</p>
+                    <div class="options space-y-2" id="options-2">
+                        <p class="mcq-option" onclick="selectAnswer(2, 'A')" role="button" tabindex="0">A) Proportional to the total charge enclosed | يتناسب مع الشحنة الكلية المحصورة</p>
+                        <p class="mcq-option" onclick="selectAnswer(2, 'B')" role="button" tabindex="0">B) Inversely proportional to the total charge enclosed | يتناسب عكسيًا مع الشحنة الكلية المحصورة</p>
+                        <p class="mcq-option" onclick="selectAnswer(2, 'C')" role="button" tabindex="0">C) Zero | صفر</p>
+                        <p class="mcq-option" onclick="selectAnswer(2, 'D')" role="button" tabindex="0">D) Undefined | غير محدد</p>
+                    </div>
+                    <p id="feedback-2" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(3)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-3">
+                    <p class="font-semibold text-lg">3. The unit of electric flux is: | وحدة التدفق الكهربائي هي:</p>
+                    <div class="options space-y-2" id="options-3">
+                        <p class="mcq-option" onclick="selectAnswer(3, 'A')" role="button" tabindex="0">A) Newton-meter squared per Coulomb (N·m²/C) | نيوتن-متر مربع لكل كولوم</p>
+                        <p class="mcq-option" onclick="selectAnswer(3, 'B')" role="button" tabindex="0">B) Coulomb per meter squared (C/m²) | كولوم لكل متر مربع</p>
+                        <p class="mcq-option" onclick="selectAnswer(3, 'C')" role="button" tabindex="0">C) Volt-meter (V·m) | فولت-متر</p>
+                        <p class="mcq-option" onclick="selectAnswer(3, 'D')" role="button" tabindex="0">D) Newton per Coulomb (N/C) | نيوتن لكل كولوم</p>
+                    </div>
+                    <p id="feedback-3" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(4)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-4">
+                    <p class="font-semibold text-lg">4. For a uniformly charged spherical shell, the electric field inside the shell is: | بالنسبة لقشرة كروية مشحونة بشكل منتظم، المجال الكهربائي داخل القشرة هو:</p>
+                    <div class="options space-y-2" id="options-4">
+                        <p class="mcq-option" onclick="selectAnswer(4, 'A')" role="button" tabindex="0">A) Zero | صفر</p>
+                        <p class="mcq-option" onclick="selectAnswer(4, 'B')" role="button" tabindex="0">B) Non-zero and uniform | غير صفر ومنتظم</p>
+                        <p class="mcq-option" onclick="selectAnswer(4, 'C')" role="button" tabindex="0">C) Non-zero and varies with distance | غير صفر ويختلف مع المسافة</p>
+                        <p class="mcq-option" onclick="selectAnswer(4, 'D')" role="button" tabindex="0">D) Undefined | غير محدد</p>
+                    </div>
+                    <p id="feedback-4" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(5)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-5">
+                    <p class="font-semibold text-lg">5. The electric field due to an infinite plane sheet of charge with surface charge density \( \sigma \) is: | المجال الكهربائي الناتج عن صفيحة مشحونة لانهائية بكثافة شحنة سطحية \( \sigma \) هو:</p>
+                    <div class="options space-y-2" id="options-5">
+                        <p class="mcq-option" onclick="selectAnswer(5, 'A')" role="button" tabindex="0">A) \( E = \frac{\sigma}{2\epsilon_0} \) | \( E = \frac{\sigma}{2\epsilon_0} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(5, 'B')" role="button" tabindex="0">B) \( E = \frac{\sigma}{\epsilon_0} \) | \( E = \frac{\sigma}{\epsilon_0} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(5, 'C')" role="button" tabindex="0">C) \( E = \frac{\sigma}{4\epsilon_0} \) | \( E = \frac{\sigma}{4\epsilon_0} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(5, 'D')" role="button" tabindex="0">D) \( E = \frac{\sigma}{\epsilon_0^2} \) | \( E = \frac{\sigma}{\epsilon_0^2} \)</p>
+                    </div>
+                    <p id="feedback-5" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(6)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-6">
+                    <p class="font-semibold text-lg">6. If the charge enclosed by a Gaussian surface is doubled, the electric flux through the surface: | إذا تضاعفت الشحنة المحصورة داخل سطح جاوسي، فإن التدفق الكهربائي عبر السطح:</p>
+                    <div class="options space-y-2" id="options-6">
+                        <p class="mcq-option" onclick="selectAnswer(6, 'A')" role="button" tabindex="0">A) Doubles | يتضاعف</p>
+                        <p class="mcq-option" onclick="selectAnswer(6, 'B')" role="button" tabindex="0">B) Halves | ينخفض إلى النصف</p>
+                        <p class="mcq-option" onclick="selectAnswer(6, 'C')" role="button" tabindex="0">C) Quadruples | يتضاعف أربع مرات</p>
+                        <p class="mcq-option" onclick="selectAnswer(6, 'D')" role="button" tabindex="0">D) Remains the same | يبقى كما هو</p>
+                    </div>
+                    <p id="feedback-6" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(7)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-7">
+                    <p class="font-semibold text-lg">7. The electric field at a distance \( r \) from a long straight wire with linear charge density \( \lambda \) is: | المجال الكهربائي على مسافة \( r \) من سلك مستقيم طويل بكثافة شحنة خطية \( \lambda \) هو:</p>
+                    <div class="options space-y-2" id="options-7">
+                        <p class="mcq-option" onclick="selectAnswer(7, 'A')" role="button" tabindex="0">A) \( E = \frac{\lambda}{2\pi \epsilon_0 r} \) | \( E = \frac{\lambda}{2\pi \epsilon_0 r} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(7, 'B')" role="button" tabindex="0">B) \( E = \frac{\lambda}{\epsilon_0 r} \) | \( E = \frac{\lambda}{\epsilon_0 r} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(7, 'C')" role="button" tabindex="0">C) \( E = \frac{\lambda}{4\pi \epsilon_0 r} \) | \( E = \frac{\lambda}{4\pi \epsilon_0 r} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(7, 'D')" role="button" tabindex="0">D) \( E = \frac{\lambda}{\epsilon_0 r^2} \) | \( E = \frac{\lambda}{\epsilon_0 r^2} \)</p>
+                    </div>
+                    <p id="feedback-7" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(8)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-8">
+                    <p class="font-semibold text-lg">8. For a point charge \( q \), the electric field at a distance \( r \) is: | بالنسبة لشحنة نقطية \( q \)، المجال الكهربائي على مسافة \( r \) هو:</p>
+                    <div class="options space-y-2" id="options-8">
+                        <p class="mcq-option" onclick="selectAnswer(8, 'A')" role="button" tabindex="0">A) \( E = \frac{k q}{r^2} \) | \( E = \frac{k q}{r^2} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(8, 'B')" role="button" tabindex="0">B) \( E = \frac{k q}{r} \) | \( E = \frac{k q}{r} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(8, 'C')" role="button" tabindex="0">C) \( E = \frac{k q}{r^3} \) | \( E = \frac{k q}{r^3} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(8, 'D')" role="button" tabindex="0">D) \( E = \frac{k q}{\sqrt{r}} \) | \( E = \frac{k q}{\sqrt{r}} \)</p>
+                    </div>
+                    <p id="feedback-8" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(9)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-9">
+                    <p class="font-semibold text-lg">9. The electric flux through a closed surface that encloses no charge is: | التدفق الكهربائي عبر سطح مغلق لا يحصر شحنة هو:</p>
+                    <div class="options space-y-2" id="options-9">
+                        <p class="mcq-option" onclick="selectAnswer(9, 'A')" role="button" tabindex="0">A) Zero | صفر</p>
+                        <p class="mcq-option" onclick="selectAnswer(9, 'B')" role="button" tabindex="0">B) Non-zero | غير صفر</p>
+                        <p class="mcq-option" onclick="selectAnswer(9, 'C')" role="button" tabindex="0">C) Undefined | غير محدد</p>
+                        <p class="mcq-option" onclick="selectAnswer(9, 'D')" role="button" tabindex="0">D) Infinite | لا نهائي</p>
+                    </div>
+                    <p id="feedback-9" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(10)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-10">
+                    <p class="font-semibold text-lg">10. The electric field inside a uniformly charged spherical shell of radius \( R \) at a distance \( r < R \) from the center is: | المجال الكهربائي داخل قشرة كروية مشحونة بشكل منتظم نصف قطرها \( R \) على مسافة \( r < R \) من المركز هو:</p>
+                    <div class="options space-y-2" id="options-10">
+                        <p class="mcq-option" onclick="selectAnswer(10, 'A')" role="button" tabindex="0">A) Zero | صفر</p>
+                        <p class="mcq-option" onclick="selectAnswer(10, 'B')" role="button" tabindex="0">B) Non-zero and uniform | غير صفر ومنتظم</p>
+                        <p class="mcq-option" onclick="selectAnswer(10, 'C')" role="button" tabindex="0">C) Non-zero and varies with distance | غير صفر ويختلف مع المسافة</p>
+                        <p class="mcq-option" onclick="selectAnswer(10, 'D')" role="button" tabindex="0">D) Undefined | غير محدد</p>
+                    </div>
+                    <p id="feedback-10" class="mt-3 fade-in-feedback"></p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-blue-900 text-white py-4">
+        <div class="container mx-auto px-4 text-center">
+            <p>Learn more about physics at <a href="https://www.physicsclassroom.com/" class="underline hover:text-blue-300" aria-label="Visit The Physics Classroom">The Physics Classroom</a></p>
+            <p>© 2025 Physics Education. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript for Grading System and Interactivity -->
+    <script>
+        const jsConfetti = new JSConfetti();
+        let score = 0;
+        let answeredQuestions = new Set();
+        const totalQuestions = 10;
+        const correctAnswers = {
+            1: 'A',
+            2: 'A',
+            3: 'A',
+            4: 'A',
+            5: 'A',
+            6: 'A',
+            7: 'A',
+            8: 'A',
+            9: 'A',
+            10: 'A'
+        };
+        const explanations = {
+            1: 'Gauss\'s Law is particularly useful for calculating electric fields in situations with high symmetry, such as point charges, line charges, and plane sheets of charge. | قانون جاوس مفيد بشكل خاص لحساب المجالات الكهربائية في الحالات ذات التماثل العالي، مثل الشحنات النقطية، والأسلاك المشحونة، والصفائح المشحونة.',
+            2: 'According to Gauss\'s Law, the electric flux through a closed surface is proportional to the total charge enclosed by the surface. | وفقًا لقانون جاوس، التدفق الكهربائي عبر سطح مغلق يتناسب مع الشحنة الكلية المحصورة داخل السطح.',
+            3: 'The unit of electric flux is Newton-meter squared per Coulomb (N·m²/C). | وحدة التدفق الكهربائي هي نيوتن-متر مربع لكل كولوم (N·m²/C).',
+            4: 'According to Gauss\'s Law, the electric field inside a uniformly charged spherical shell is zero. | وفقًا لقانون جاوس، المجال الكهربائي داخل قشرة كروية مشحونة بشكل منتظم هو صفر.',
+            5: 'The electric field due to an infinite plane sheet of charge is \( E = \\frac{\\sigma}{2\\epsilon_0} \). | المجال الكهربائي الناتج عن صفيحة مشحونة لانهائية هو \( E = \\frac{\\sigma}{2\\epsilon_0} \).',
+            6: 'According to Gauss\'s Law, if the charge enclosed \( Q_{\\text{enc}} \) is doubled, the electric flux \( \\Phi_E \) through the surface doubles (\( \\Phi_E \\propto Q_{\\text{enc}} \)). | وفقًا لقانون جاوس، إذا تضاعفت الشحنة المحصورة \( Q_{\\text{enc}} \)، فإن التدفق الكهربائي \( \\Phi_E \) عبر السطح يتضاعف (\( \\Phi_E \\propto Q_{\\text{enc}} \)).',
+            7: 'The electric field at a distance \( r \) from a long straight wire with linear charge density \( \\lambda \) is \( E = \\frac{\\lambda}{2\\pi \\epsilon_0 r} \). | المجال الكهربائي على مسافة \( r \) من سلك مستقيم طويل بكثافة شحنة خطية \( \\lambda \) هو \( E = \\frac{\\lambda}{2\\pi \\epsilon_0 r} \).',
+            8: 'The electric field at a distance \( r \) from a point charge \( q \) is \( E = \\frac{k q}{r^2} \), where \( k \) is Coulomb\'s constant. | المجال الكهربائي على مسافة \( r \) من شحنة نقطية \( q \) هو \( E = \\frac{k q}{r^2} \)، حيث \( k \) هو ثابت كولوم.',
+            9: 'According to Gauss\'s Law, if the enclosed charge \( Q_{\\text{enc}} \) is zero, the electric flux \( \\Phi_E \) through the surface is zero. | وفقًا لقانون جاوس، إذا كانت الشحنة المحصورة \( Q_{\\text{enc}} \) صفرًا، فإن التدفق الكهربائي \( \\Phi_E \) عبر السطح هو صفر.',
+            10: 'According to Gauss\'s Law, the electric field inside a uniformly charged spherical shell is zero. | وفقًا لقانون جاوس، المجال الكهربائي داخل قشرة كروية مشحونة بشكل منتظم هو صفر.'
+        };
+        const correctAnswerText = {
+            1: 'A) Calculate the electric field in situations with high symmetry | حساب المجال الكهربائي في الحالات ذات التماثل العالي',
+            2: 'A) Proportional to the total charge enclosed | يتناسب مع الشحنة الكلية المحصورة',
+            3: 'A) Newton-meter squared per Coulomb (N·m²/C) | نيوتن-متر مربع لكل كولوم',
+            4: 'A) Zero | صفر',
+            5: 'A) \( E = \\frac{\\sigma}{2\\epsilon_0} \) | \( E = \\frac{\\sigma}{2\\epsilon_0} \)',
+            6: 'A) Doubles | يتضاعف',
+            7: 'A) \( E = \\frac{\\lambda}{2\\pi \\epsilon_0 r} \) | \( E = \\frac{\\lambda}{2\\pi \\epsilon_0 r} \)',
+            8: 'A) \( E = \\frac{k q}{r^2} \) | \( E = \\frac{k q}{r^2} \)',
+            9: 'A) Zero | صفر',
+            10: 'A) Zero | صفر'
+        };
+
+        // Load saved progress
+        function loadProgress() {
+            const savedAnswers = JSON.parse(localStorage.getItem('gaussLawQuizAnswers')) || {};
+            score = 0;
+            answeredQuestions = new Set();
+            Object.keys(savedAnswers).forEach(qNum => {
+                const questionNumber = parseInt(qNum);
+                const selectedOption = savedAnswers[qNum];
+                answeredQuestions.add(questionNumber);
+                const feedbackElement = document.getElementById(`feedback-${questionNumber}`);
+                const options = document.getElementById(`options-${questionNumber}`).getElementsByClassName('mcq-option');
+                const nextButton = document.getElementById(`mcq-${questionNumber}`).querySelector('.next-button');
+                for (let option of options) {
+                    if (option.textContent.startsWith(selectedOption + ')')) {
+                        option.classList.add(selectedOption === correctAnswers[questionNumber] ? 'selected-correct' : 'selected-incorrect');
+                    }
+                }
+                if (selectedOption === correctAnswers[questionNumber]) {
+                    score++;
+                    feedbackElement.innerHTML = `<span class="correct">Correct! | صحيح!</span> ${explanations[questionNumber]}`;
+                } else {
+                    feedbackElement.innerHTML = `<span class="incorrect">Incorrect. | غير صحيح.</span> The correct answer is: <span class="correct-answer">${correctAnswerText[questionNumber]}</span>. ${explanations[questionNumber]}`;
+                }
+                if (nextButton && questionNumber < totalQuestions) {
+                    nextButton.classList.remove('hidden');
+                }
+            });
+            updateProgress();
+        }
+
+        function selectAnswer(questionNumber, selectedOption) {
+            if (answeredQuestions.has(questionNumber)) return; // Prevent answering twice
+            answeredQuestions.add(questionNumber);
+            const feedbackElement = document.getElementById(`feedback-${questionNumber}`);
+            const options = document.getElementById(`options-${questionNumber}`).getElementsByClassName('mcq-option');
+            const nextButton = document.getElementById(`mcq-${questionNumber}`).querySelector('.next-button');
+            for (let option of options) {
+                if (option.textContent.startsWith(selectedOption + ')')) {
+                    option.classList.add(selectedOption === correctAnswers[questionNumber] ? 'selected-correct' : 'selected-incorrect');
+                }
+            }
+            if (selectedOption === correctAnswers[questionNumber]) {
+                score++;
+                feedbackElement.innerHTML = `<span class="correct">Correct! | صحيح!</span> ${explanations[questionNumber]}`;
+            } else {
+                feedbackElement.innerHTML = `<span class="incorrect">Incorrect. | غير صحيح.</span> The correct answer is: <span class="correct-answer">${correctAnswerText[questionNumber]}</span>. ${explanations[questionNumber]}`;
+            }
+            if (nextButton && questionNumber < totalQuestions) {
+                nextButton.classList.remove('hidden');
+            }
+            localStorage.setItem('gaussLawQuizAnswers', JSON.stringify({
+                ...JSON.parse(localStorage.getItem('gaussLawQuizAnswers') || '{}'),
+                [questionNumber]: selectedOption
+            }));
+            updateProgress();
+        }
+
+        function scrollToNext(questionNumber) {
+            const nextMcq = document.getElementById(`mcq-${questionNumber}`);
+            if (nextMcq) {
+                nextMcq.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function updateProgress() {
+            const progress = answeredQuestions.size;
+            const percentage = Math.round((score / totalQuestions) * 100);
+            document.getElementById('progress').textContent = progress;
+            document.getElementById('score').textContent = score;
+            document.getElementById('percentage').textContent = percentage;
+            document.getElementById('progress-bar-fill').style.width = `${(progress / totalQuestions) * 100}%`;
+        }
+
+        function submitQuiz() {
+            if (answeredQuestions.size < totalQuestions) {
+                document.getElementById('quiz-feedback').textContent = 'Please answer all questions before submitting. | الرجاء الإجابة على جميع الأسئلة قبل الإرسال.';
+                return;
+            }
+            const percentage = Math.round((score / totalQuestions) * 100);
+            let feedback;
+            if (percentage >= 80) {
+                feedback = 'Excellent! You have a strong grasp of Gauss\'s Law. | ممتاز! لديك فهم قوي لقانون جاوس.';
+                jsConfetti.addConfetti();
+            } else if (percentage >= 50) {
+                feedback = 'Good job! Review some concepts to improve. | عمل جيد! راجع بعض المفاهيم لتحسين درجاتك.';
+            } else {
+                feedback = 'Try again! Focus on reviewing the key concepts. | حاول مرة أخرى! ركز على مراجعة المفاهيم الأساسية.';
+            }
+            document.getElementById('quiz-feedback').textContent = feedback;
+            document.getElementById('submit-quiz').disabled = true;
+        }
+
+        function resetQuiz() {
+            localStorage.removeItem('gaussLawQuizAnswers');
+            score = 0;
+            answeredQuestions.clear();
+            for (let i = 1; i <= totalQuestions; i++) {
+                document.getElementById(`feedback-${i}`).textContent = '';
+                const options = document.getElementById(`options-${i}`).getElementsByClassName('mcq-option');
+                const nextButton = document.getElementById(`mcq-${i}`).querySelector('.next-button');
+                for (let option of options) {
+                    option.classList.remove('selected-correct', 'selected-incorrect');
+                }
+                if (nextButton) {
+                    nextButton.classList.add('hidden');
+                }
+            }
+            document.getElementById('progress').textContent = '0';
+            document.getElementById('score').textContent = '0';
+            document.getElementById('percentage').textContent = '0';
+            document.getElementById('progress-bar-fill').style.width = '0%';
+            document.getElementById('quiz-feedback').textContent = '';
+            document.getElementById('submit-quiz').disabled = false;
+        }
+
+        // Theme Toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            themeToggle.textContent = document.body.classList.contains('dark-mode') ? 'Light Mode' : 'Dark Mode';
+        });
+
+        // Submit Quiz
+        document.getElementById('submit-quiz').addEventListener('click', submitQuiz);
+
+        // Reset Quiz
+        document.getElementById('reset-quiz').addEventListener('click', resetQuiz);
+
+        // Keyboard Navigation
+        document.querySelectorAll('.mcq-option').forEach(option => {
+            option.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    option.click();
+                }
+            });
+        });
+
+        // Load saved progress on page load
+        window.onload = loadProgress;
+    </script>
+</body>
+</html>

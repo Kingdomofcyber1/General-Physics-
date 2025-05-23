@@ -1,0 +1,579 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 1: Electrostatic Charge | الفصل الأول: الشحنة الكهروستاتيكية</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- MathJax for rendering equations -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <!-- JSConfetti for celebration animation -->
+    <script src="https://cdn.jsdelivr.net/npm/js-confetti@latest/dist/js-confetti.browser.js"></script>
+    <style>
+        body {
+            background-image: url('https://www.transparenttextures.com/patterns/circuit.png');
+            background-color: #f0f4f8;
+            transition: background-color 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        }
+        .dark-mode {
+            background-color: #1f2937;
+            color: #e5e7eb;
+        }
+        .dark-mode .bg-white {
+            background-color: #374151;
+        }
+        .dark-mode .bg-blue-50 {
+            background-color: #4b5563;
+        }
+        .dark-mode .text-blue-900 {
+            color: #93c5fd;
+        }
+        .dark-mode .text-gray-800 {
+            color: #d1d5db;
+        }
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .mcq-option {
+            padding: 10px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        .mcq-option:hover {
+            background-color: #e2e8f0;
+            cursor: pointer;
+            transform: scale(1.02);
+        }
+        .dark-mode .mcq-option:hover {
+            background-color: #4b5563;
+        }
+        .selected-correct {
+            background-color: #d1fae5;
+            border: 2px solid #15803d;
+            font-weight: 600;
+        }
+        .selected-incorrect {
+            background-color: #fee2e2;
+            border: 2px solid #b91c1c;
+            font-weight: 600;
+        }
+        .correct {
+            color: #15803d;
+            font-weight: bold;
+        }
+        .incorrect {
+            color: #b91c1c;
+            font-weight: bold;
+        }
+        .correct-answer {
+            color: #1d4ed8;
+            font-weight: bold;
+        }
+        .fade-in {
+            animation: fadeIn 1s ease-in-out;
+        }
+        .fade-in-feedback {
+            animation: fadeInFeedback 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeInFeedback {
+            0% { opacity: 0; transform: translateY(5px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 220px;
+            background-color: #1f2937;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -110px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        .progress-bar {
+            height: 12px;
+            background-color: #e5e7eb;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background-color: #3b82f6;
+            transition: width 0.3s ease;
+        }
+        .charge-icon::before {
+            content: '⚡️';
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        .next-button {
+            transition: all 0.2s ease;
+        }
+        .next-button:hover {
+            transform: translateX(4px);
+        }
+        .resource-link:hover {
+            text-decoration: underline;
+            color: #1d4ed8;
+        }
+        .dark-mode .resource-link:hover {
+            color: #93c5fd;
+        }
+    </style>
+</head>
+<body class="font-sans text-gray-800">
+    <!-- Header -->
+    <header class="bg-blue-900 text-white py-4 sticky-header">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold">Physics: Electrostatic Charge | الفيزياء: الشحنة الكهروستاتيكية</h1>
+            <nav class="flex items-center space-x-4">
+                <a href="#explanation" class="px-2 hover:underline" aria-label="Jump to Explanation Section">Explanation | الشرح</a>
+                <a href="#resources" class="px-2 hover:underline" aria-label="Jump to Resources Section">Resources | الموارد</a>
+                <a href="#mcqs" class="px-2 hover:underline" aria-label="Jump to MCQs Section">MCQs | الأسئلة</a>
+                <button id="theme-toggle" class="px-2 py-1 bg-blue-700 rounded hover:bg-blue-600" aria-label="Toggle Dark Mode">Dark Mode</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8">
+        <section id="explanation" class="bg-white rounded-lg shadow-lg p-6 mb-8 fade-in">
+            <h2 class="text-3xl font-semibold text-blue-900 mb-4 charge-icon">Chapter 1: Electrostatic Charge | الفصل الأول: الشحنة الكهروستاتيكية</h2>
+            <p class="mb-4">Electrostatic charge is a fundamental property of matter that causes it to experience a force in an electric field. Charges can be positive or negative, and like charges repel while opposite charges attract. This chapter introduces the concept of electric charge, Coulomb's Law, and the principles governing electrostatic interactions.</p>
+            <p class="mb-4">الشحنة الكهروستاتيكية هي خاصية أساسية للمادة تجعلها تتعرض لقوة في مجال كهربائي. يمكن أن تكون الشحنات موجبة أو سالبة، والشحنات المتشابهة تتنافر بينما الشحنات المعاكسة تتجاذب. يقدم هذا الفصل مفهوم الشحنة الكهربائية، قانون كولوم، والمبادئ التي تحكم التفاعلات الكهروستاتيكية.</p>
+
+            <h3 class="text-2xl font-semibold text-gray-800 mb-3 charge-icon">Electric Charge Definition | تعريف الشحنة الكهربائية</h3>
+            <p class="mb-2">Electric charge (\(q\)) is a physical property of matter that causes it to experience a force when placed in an electric field. The unit of charge is the Coulomb (C).</p>
+            <p class="mb-2">الشحنة الكهربائية (\(q\)) هي خاصية فيزيائية للمادة تجعلها تتعرض لقوة عند وضعها في مجال كهربائي. وحدة الشحنة هي الكولوم (C).</p>
+
+            <h3 class="text-2xl font-semibold text-gray-800 mb-3 charge-icon">Coulomb's Law | قانون كولوم</h3>
+            <p class="mb-2">Coulomb's Law describes the force between two point charges \(q_1\) and \(q_2\) separated by a distance \(r\).</p>
+            <p class="mb-2">قانون كولوم يصف القوة بين شحنتين نقطيتين \(q_1\) و \(q_2\) مفصولتين بمسافة \(r\).</p>
+            <div class="bg-blue-50 p-4 rounded-lg text-center my-4">
+                \[ F = k \frac{q_1 q_2}{r^2} \]
+                <div class="tooltip"><span class="underline">k</span><span class="tooltip-text">ثابت كولوم: \( 9 \times 10^9 \, \text{N} \cdot \text{m}^2/\text{C}^2 \)</span></div>
+            </div>
+            <p>where \(k\) is Coulomb's constant (\(9 \times 10^9 \, \text{N} \cdot \text{m}^2/\text{C}^2\)), \(q_1\) and \(q_2\) are the charges, and \(r\) is the distance between them.</p>
+            <p>حيث \(k\) هو ثابت كولوم (\(9 \times 10^9 \, \text{N} \cdot \text{m}^2/\text{C}^2\))، \(q_1\) و \(q_2\) هما الشحنتان، و\(r\) هي المسافة بينهما.</p>
+
+            <h3 class="text-2xl font-semibold text-gray-800 mb-3 charge-icon">Conservation of Charge | حفظ الشحنة</h3>
+            <p class="mb-2">The total electric charge in an isolated system is constant. Charge can neither be created nor destroyed, only transferred from one object to another.</p>
+            <p class="mb-2">إجمالي الشحنة الكهربائية في نظام معزول ثابت. لا يمكن إنشاء الشحنة أو تدميرها، فقط يمكن نقلها من جسم إلى آخر.</p>
+
+            <h3 class="text-2xl font-semibold text-gray-800 mb-3 charge-icon">Electrostatic Discharge | التفريغ الكهروستاتيكي</h3>
+            <p class="mb-2">Electrostatic discharge occurs when charge is transferred between objects, often resulting in a spark, such as when touching a metal object after walking on a carpet.</p>
+            <p class="mb-2">يحدث التفريغ الكهروستاتيكي عندما تنتقل الشحنة بين الأجسام، مما يؤدي غالبًا إلى شرارة، مثل عند لمس جسم معدني بعد المشي على سجادة.</p>
+        </section>
+
+        <!-- Resources Section -->
+        <section id="resources" class="bg-white rounded-lg shadow-lg p-6 mb-8 fade-in">
+            <h2 class="text-3xl font-semibold text-blue-900 mb-4 charge-icon">Resources | الموارد</h2>
+            <p class="mb-4">Explore additional materials to deepen your understanding of Electrostatic Charge.</p>
+            <p class="mb-4">استكشف مواد إضافية لتعميق فهمك للشحنة الكهروستاتيكية.</p>
+            <ul class="space-y-2">
+                <li>
+                    <span class="inline-block mr-2">📄</span>
+                    <a href="https://drive.google.com/file/d/1HYt_HjNrDMA4YV7QWCvspiSUYExRgSi2/view?usp=drivesdk" target="_blank" class="resource-link text-blue-600">Summary | ملخص الفصل الأول</a>
+                </li>
+                <li>
+                    <span class="inline-block mr-2">🎥</span>
+                    <a href="https://youtu.be/WrjQkhUBbOU?si=qjVpUme66Srao-gf" target="_blank" class="resource-link text-blue-600">Video: Electric Force | فيديو: القوة الكهربائية</a>
+                </li>
+                <li>
+                    <span class="inline-block mr-2">🎥</span>
+                    <a href="https://youtu.be/mvsoSqTh6zc?si=gUgPC8p06BrfT00c" target="_blank" class="resource-link text-blue-600">Video: Electric Field | فيديو: المجال الكهربائي</a>
+                </li>
+                <li>
+                    <span class="inline-block mr-2">🎥</span>
+                    <a href="https://youtu.be/KjszkWohYnY?si=iRnGWzD3LLHxhp94" target="_blank" class="resource-link text-blue-600">Video: Coulomb's Law | فيديو: قانون كولوم</a>
+                </li>
+            </ul>
+        </section>
+
+        <section id="mcqs" class="bg-white rounded-lg shadow-lg p-6 fade-in">
+            <h2 class="text-3xl font-semibold text-blue-900 mb-4 charge-icon">Multiple Choice Questions (MCQs) | أسئلة الاختيار المتعدد</h2>
+            <div class="mb-6">
+                <p class="font-semibold">Progress: <span id="progress">0</span>/10</p>
+                <div class="progress-bar">
+                    <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%;"></div>
+                </div>
+                <p class="font-semibold mt-2">Score: <span id="score">0</span>/10 (<span id="percentage">0</span>%)</p>
+                <p id="quiz-feedback" class="mt-2 font-semibold text-lg"></p>
+                <div class="mt-4 flex space-x-2">
+                    <button id="submit-quiz" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition" aria-label="Submit Quiz">Submit Quiz | إرسال الاختبار</button>
+                    <button id="reset-quiz" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition" aria-label="Reset Quiz">Reset Quiz | إعادة الاختبار</button>
+                </div>
+            </div>
+            <div class="space-y-8">
+                <div class="mcq" id="mcq-1">
+                    <p class="font-semibold text-lg">1. What is the nature of the force between like charges? | ما طبيعة القوة بين الشحنات المتشابهة؟</p>
+                    <div class="options space-y-2" id="options-1">
+                        <p class="mcq-option" onclick="selectAnswer(1, 'A')" role="button" tabindex="0">A) Attractive | تجاذب</p>
+                        <p class="mcq-option" onclick="selectAnswer(1, 'B')" role="button" tabindex="0">B) Repulsive | تنافر</p>
+                        <p class="mcq-option" onclick="selectAnswer(1, 'C')" role="button" tabindex="0">C) Neutral | محايد</p>
+                        <p class="mcq-option" onclick="selectAnswer(1, 'D')" role="button" tabindex="0">D) Undefined | غير محدد</p>
+                    </div>
+                    <p id="feedback-1" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(2)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-2">
+                    <p class="font-semibold text-lg">2. What is the unit of electric charge? | ما هي وحدة الشحنة الكهربائية؟</p>
+                    <div class="options space-y-2" id="options-2">
+                        <p class="mcq-option" onclick="selectAnswer(2, 'A')" role="button" tabindex="0">A) Newton | نيوتن</p>
+                        <p class="mcq-option" onclick="selectAnswer(2, 'B')" role="button" tabindex="0">B) Coulomb | كولوم</p>
+                        <p class="mcq-option" onclick="selectAnswer(2, 'C')" role="button" tabindex="0">C) Volt | فولت</p>
+                        <p class="mcq-option" onclick="selectAnswer(2, 'D')" role="button" tabindex="0">D) Ampere | أمبير</p>
+                    </div>
+                    <p id="feedback-2" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(3)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-3">
+                    <p class="font-semibold text-lg">3. According to Coulomb's Law, if the distance between two charges is doubled, the force between them: | وفقًا لقانون كولوم، إذا تضاعفت المسافة بين شحنتين، فإن القوة بينهما:</p>
+                    <div class="options space-y-2" id="options-3">
+                        <p class="mcq-option" onclick="selectAnswer(3, 'A')" role="button" tabindex="0">A) Doubles | تتضاعف</p>
+                        <p class="mcq-option" onclick="selectAnswer(3, 'B')" role="button" tabindex="0">B) Quadruples | تتضاعف أربع مرات</p>
+                        <p class="mcq-option" onclick="selectAnswer(3, 'C')" role="button" tabindex="0">C) Halves | تنخفض إلى النصف</p>
+                        <p class="mcq-option" onclick="selectAnswer(3, 'D')" role="button" tabindex="0">D) Decreases by a factor of 4 | تنخفض بمعامل 4</p>
+                    </div>
+                    <p id="feedback-3" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(4)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-4">
+                    <p class="font-semibold text-lg">4. The principle of conservation of charge states that: | مبدأ حفظ الشحنة ينص على أن:</p>
+                    <div class="options space-y-2" id="options-4">
+                        <p class="mcq-option" onclick="selectAnswer(4, 'A')" role="button" tabindex="0">A) Charge can be created | يمكن إنشاء الشحنة</p>
+                        <p class="mcq-option" onclick="selectAnswer(4, 'B')" role="button" tabindex="0">B) Charge can be destroyed | يمكن تدمير الشحنة</p>
+                        <p class="mcq-option" onclick="selectAnswer(4, 'C')" role="button" tabindex="0">C) Total charge in an isolated system is constant | إجمالي الشحنة في نظام معزول ثابت</p>
+                        <p class="mcq-option" onclick="selectAnswer(4, 'D')" role="button" tabindex="0">D) Charge cannot be transferred | لا يمكن نقل الشحنة</p>
+                    </div>
+                    <p id="feedback-4" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(5)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-5">
+                    <p class="font-semibold text-lg">5. What is Coulomb's constant (\(k\)) approximately equal to? | ما هي القيمة التقريبية لثابت كولوم (\(k\))؟</p>
+                    <div class="options space-y-2" id="options-5">
+                        <p class="mcq-option" onclick="selectAnswer(5, 'A')" role="button" tabindex="0">A) \(9 \times 10^6 \, \text{N} \cdot \text{m}^2/\text{C}^2\) | \(9 \times 10^6 \, \text{N} \cdot \text{m}^2/\text{C}^2\)</p>
+                        <p class="mcq-option" onclick="selectAnswer(5, 'B')" role="button" tabindex="0">B) \(9 \times 10^9 \, \text{N} \cdot \text{m}^2/\text{C}^2\) | \(9 \times 10^9 \, \text{N} \cdot \text{m}^2/\text{C}^2\)</p>
+                        <p class="mcq-option" onclick="selectAnswer(5, 'C')" role="button" tabindex="0">C) \(9 \times 10^{12} \, \text{N} \cdot \text{m}^2/\text{C}^2\) | \(9 \times 10^{12} \, \text{N} \cdot \text{m}^2/\text{C}^2\)</p>
+                        <p class="mcq-option" onclick="selectAnswer(5, 'D')" role="button" tabindex="0">D) \(9 \times 10^3 \, \text{N} \cdot \text{m}^2/\text{C}^2\) | \(9 \times 10^3 \, \text{N} \cdot \text{m}^2/\text{C}^2\)</p>
+                    </div>
+                    <p id="feedback-5" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(6)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-6">
+                    <p class="font-semibold text-lg">6. Electrostatic discharge is most likely to occur: | التفريغ الكهروستاتيكي يحدث غالبًا:</p>
+                    <div class="options space-y-2" id="options-6">
+                        <p class="mcq-option" onclick="selectAnswer(6, 'A')" role="button" tabindex="0">A) In a vacuum | في الفراغ</p>
+                        <p class="mcq-option" onclick="selectAnswer(6, 'B')" role="button" tabindex="0">B) When touching a metal object after walking on a carpet | عند لمس جسم معدني بعد المشي على سجادة</p>
+                        <p class="mcq-option" onclick="selectAnswer(6, 'C')" role="button" tabindex="0">C) In a conductor | في موصل</p>
+                        <p class="mcq-option" onclick="selectAnswer(6, 'D')" role="button" tabindex="0">D) In a magnetic field | في مجال مغناطيسي</p>
+                    </div>
+                    <p id="feedback-6" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(7)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-7">
+                    <p class="font-semibold text-lg">7. If the magnitude of two charges is doubled, the force between them: | إذا تضاعف مقدار شحنتين، فإن القوة بينهما:</p>
+                    <div class="options space-y-2" id="options-7">
+                        <p class="mcq-option" onclick="selectAnswer(7, 'A')" role="button" tabindex="0">A) Doubles | تتضاعف</p>
+                        <p class="mcq-option" onclick="selectAnswer(7, 'B')" role="button" tabindex="0">B) Quadruples | تتضاعف أربع مرات</p>
+                        <p class="mcq-option" onclick="selectAnswer(7, 'C')" role="button" tabindex="0">C) Halves | تنخفض إلى النصف</p>
+                        <p class="mcq-option" onclick="selectAnswer(7, 'D')" role="button" tabindex="0">D) Remains the same | تظل كما هي</p>
+                    </div>
+                    <p id="feedback-7" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(8)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-8">
+                    <p class="font-semibold text-lg">8. The force between two charges is proportional to: | القوة بين شحنتين تتناسب مع:</p>
+                    <div class="options space-y-2" id="options-8">
+                        <p class="mcq-option" onclick="selectAnswer(8, 'A')" role="button" tabindex="0">A) The sum of the charges | مجموع الشحنات</p>
+                        <p class="mcq-option" onclick="selectAnswer(8, 'B')" role="button" tabindex="0">B) The product of the charges | حاصل ضرب الشحنات</p>
+                        <p class="mcq-option" onclick="selectAnswer(8, 'C')" role="button" tabindex="0">C) The difference of the charges | فرق الشحنات</p>
+                        <p class="mcq-option" onclick="selectAnswer(8, 'D')" role="button" tabindex="0">D) The distance between the charges | المسافة بين الشحنات</p>
+                    </div>
+                    <p id="feedback-8" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(9)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-9">
+                    <p class="font-semibold text-lg">9. A neutral object becomes charged by: | يصبح جسم محايد مشحونًا عن طريق:</p>
+                    <div class="options space-y-2" id="options-9">
+                        <p class="mcq-option" onclick="selectAnswer(9, 'A')" role="button" tabindex="0">A) Losing or gaining electrons | فقدان أو اكتساب إلكترونات</p>
+                        <p class="mcq-option" onclick="selectAnswer(9, 'B')" role="button" tabindex="0">B) Losing protons | فقدان بروتونات</p>
+                        <p class="mcq-option" onclick="selectAnswer(9, 'C')" role="button" tabindex="0">C) Gaining neutrons | اكتساب نيوترونات</p>
+                        <p class="mcq-option" onclick="selectAnswer(9, 'D')" role="button" tabindex="0">D) Increasing its mass | زيادة كتلته</p>
+                    </div>
+                    <p id="feedback-9" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(10)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-10">
+                    <p class="font-semibold text-lg">10. The force between two charges is inversely proportional to: | القوة بين شحنتين تتناسب عكسيًا مع:</p>
+                    <div class="options space-y-2" id="options-10">
+                        <p class="mcq-option" onclick="selectAnswer(10, 'A')" role="button" tabindex="0">A) The product of the charges | حاصل ضرب الشحنات</p>
+                        <p class="mcq-option" onclick="selectAnswer(10, 'B')" role="button" tabindex="0">B) The square of the distance between them | مربع المسافة بينهما</p>
+                        <p class="mcq-option" onclick="selectAnswer(10, 'C')" role="button" tabindex="0">C) The sum of the charges | مجموع الشحنات</p>
+                        <p class="mcq-option" onclick="selectAnswer(10, 'D')" role="button" tabindex="0">D) Coulomb's constant | ثابت كولوم</p>
+                    </div>
+                    <p id="feedback-10" class="mt-3 fade-in-feedback"></p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-blue-900 text-white py-4">
+        <div class="container mx-auto px-4 text-center">
+            <p>Learn more about physics at <a href="https://www.physicsclassroom.com/" class="underline hover:text-blue-300" aria-label="Visit The Physics Classroom">The Physics Classroom</a></p>
+            <p>© 2025 Physics Education. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript for Grading System and Interactivity -->
+    <script>
+        const jsConfetti = new JSConfetti();
+        let score = 0;
+        let answeredQuestions = new Set();
+        const totalQuestions = 10;
+        const correctAnswers = {
+            1: 'B',
+            2: 'B',
+            3: 'D',
+            4: 'C',
+            5: 'B',
+            6: 'B',
+            7: 'B',
+            8: 'B',
+            9: 'A',
+            10: 'B'
+        };
+        const explanations = {
+            1: 'Like charges repel each other due to the electrostatic force. | الشحنات المتشابهة تتنافر بسبب القوة الكهروستاتيكية.',
+            2: 'The unit of electric charge is the Coulomb (C). | وحدة الشحنة الكهربائية هي الكولوم (C).',
+            3: 'According to Coulomb\'s Law, if the distance \(r\) is doubled, the force \(F\) decreases by a factor of 4 (\(F \propto \\frac{1}{r^2}\)). | وفقًا لقانون كولوم، إذا تضاعفت المسافة \(r\)، فإن القوة \(F\) تنخفض بمعامل 4 (\(F \propto \\frac{1}{r^2}\)).',
+            4: 'The total electric charge in an isolated system is constant; it can neither be created nor destroyed. | إجمالي الشحنة الكهربائية في نظام معزول ثابت؛ لا يمكن إنشاؤها أو تدميرها.',
+            5: 'Coulomb\'s constant is approximately \(9 \times 10^9 \, \text{N} \cdot \text{m}^2/\text{C}^2\). | ثابت كولوم يساوي تقريبًا \(9 \times 10^9 \, \text{N} \cdot \text{m}^2/\text{C}^2\).',
+            6: 'Electrostatic discharge often occurs when charge is transferred, such as touching a metal object after walking on a carpet. | يحدث التفريغ الكهروستاتيكي غالبًا عند نقل الشحنة، مثل لمس جسم معدني بعد المشي على سجادة.',
+            7: 'According to Coulomb\'s Law, if the magnitude of both charges is doubled, the force quadruples (\(F \propto q_1 q_2\)). | وفقًا لقانون كولوم، إذا تضاعف مقدار الشحنتين، فإن القوة تتضاعف أربع مرات (\(F \propto q_1 q_2\)).',
+            8: 'Coulomb\'s Law states that the force is proportional to the product of the charges (\(F \propto q_1 q_2\)). | ينص قانون كولوم على أن القوة تتناسب مع حاصل ضرب الشحنات (\(F \propto q_1 q_2\)).',
+            9: 'A neutral object becomes charged by gaining or losing electrons, not protons or neutrons. | يصبح جسم محايد مشحونًا عن طريق اكتساب أو فقدان إلكترونات، وليس بروتونات أو نيوترونات.',
+            10: 'Coulomb\'s Law states that the force is inversely proportional to the square of the distance (\(F \propto \\frac{1}{r^2}\)). | ينص قانون كولوم على أن القوة تتناسب عكسيًا مع مربع المسافة (\(F \propto \\frac{1}{r^2}\)).'
+        };
+        const correctAnswerText = {
+            1: 'B) Repulsive | تنافر',
+            2: 'B) Coulomb | كولوم',
+            3: 'D) Decreases by a factor of 4 | تنخفض بمعامل 4',
+            4: 'C) Total charge in an isolated system is constant | إجمالي الشحنة في نظام معزول ثابت',
+            5: 'B) \(9 \times 10^9 \, \text{N} \cdot \text{m}^2/\text{C}^2\) | \(9 \times 10^9 \, \text{N} \cdot \text{m}^2/\text{C}^2\)',
+            6: 'B) When touching a metal object after walking on a carpet | عند لمس جسم معدني بعد المشي على سجادة',
+            7: 'B) Quadruples | تتضاعف أربع مرات',
+            8: 'B) The product of the charges | حاصل ضرب الشحنات',
+            9: 'A) Losing or gaining electrons | فقدان أو اكتساب إلكترونات',
+            10: 'B) The square of the distance between them | مربع المسافة بينهما'
+        };
+
+        // Load saved progress
+        function loadProgress() {
+            const savedAnswers = JSON.parse(localStorage.getItem('electrostaticChargeQuizAnswers')) || {};
+            score = 0;
+            answeredQuestions = new Set();
+            Object.keys(savedAnswers).forEach(qNum => {
+                const questionNumber = parseInt(qNum);
+                const selectedOption = savedAnswers[qNum];
+                answeredQuestions.add(questionNumber);
+                const feedbackElement = document.getElementById(`feedback-${questionNumber}`);
+                const options = document.getElementById(`options-${questionNumber}`).getElementsByClassName('mcq-option');
+                const nextButton = document.getElementById(`mcq-${questionNumber}`).querySelector('.next-button');
+                for (let option of options) {
+                    if (option.textContent.startsWith(selectedOption + ')')) {
+                        option.classList.add(selectedOption === correctAnswers[questionNumber] ? 'selected-correct' : 'selected-incorrect');
+                    }
+                }
+                if (selectedOption === correctAnswers[questionNumber]) {
+                    score++;
+                    feedbackElement.innerHTML = `<span class="correct">Correct! | صحيح!</span> ${explanations[questionNumber]}`;
+                } else {
+                    feedbackElement.innerHTML = `<span class="incorrect">Incorrect. | غير صحيح.</span> The correct answer is: <span class="correct-answer">${correctAnswerText[questionNumber]}</span>. ${explanations[questionNumber]}`;
+                }
+                if (nextButton && questionNumber < totalQuestions) {
+                    nextButton.classList.remove('hidden');
+                }
+            });
+            updateProgress();
+        }
+
+        function selectAnswer(questionNumber, selectedOption) {
+            if (answeredQuestions.has(questionNumber)) return; // Prevent answering twice
+            answeredQuestions.add(questionNumber);
+            const feedbackElement = document.getElementById(`feedback-${questionNumber}`);
+            const options = document.getElementById(`options-${questionNumber}`).getElementsByClassName('mcq-option');
+            const nextButton = document.getElementById(`mcq-${questionNumber}`).querySelector('.next-button');
+            for (let option of options) {
+                if (option.textContent.startsWith(selectedOption + ')')) {
+                    option.classList.add(selectedOption === correctAnswers[questionNumber] ? 'selected-correct' : 'selected-incorrect');
+                }
+            }
+            if (selectedOption === correctAnswers[questionNumber]) {
+                score++;
+                feedbackElement.innerHTML = `<span class="correct">Correct! | صحيح!</span> ${explanations[questionNumber]}`;
+            } else {
+                feedbackElement.innerHTML = `<span class="incorrect">Incorrect. | غير صحيح.</span> The correct answer is: <span class="correct-answer">${correctAnswerText[questionNumber]}</span>. ${explanations[questionNumber]}`;
+            }
+            if (nextButton && questionNumber < totalQuestions) {
+                nextButton.classList.remove('hidden');
+            }
+            localStorage.setItem('electrostaticChargeQuizAnswers', JSON.stringify({
+                ...JSON.parse(localStorage.getItem('electrostaticChargeQuizAnswers') || '{}'),
+                [questionNumber]: selectedOption
+            }));
+            updateProgress();
+        }
+
+        function scrollToNext(questionNumber) {
+            const nextMcq = document.getElementById(`mcq-${questionNumber}`);
+            if (nextMcq) {
+                nextMcq.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function updateProgress() {
+            const progress = answeredQuestions.size;
+            const percentage = Math.round((score / totalQuestions) * 100);
+            document.getElementById('progress').textContent = progress;
+            document.getElementById('score').textContent = score;
+            document.getElementById('percentage').textContent = percentage;
+            document.getElementById('progress-bar-fill').style.width = `${(progress / totalQuestions) * 100}%`;
+        }
+
+        function submitQuiz() {
+            if (answeredQuestions.size < totalQuestions) {
+                document.getElementById('quiz-feedback').textContent = 'Please answer all questions before submitting. | الرجاء الإجابة على جميع الأسئلة قبل الإرسال.';
+                return;
+            }
+            const percentage = Math.round((score / totalQuestions) * 100);
+            let feedback;
+            if (percentage >= 80) {
+                feedback = 'Excellent! You have a strong grasp of electrostatic charge. | ممتاز! لديك فهم قوي للشحنة الكهروستاتيكية.';
+                jsConfetti.addConfetti();
+            } else if (percentage >= 50) {
+                feedback = 'Good job! Review some concepts to improve. | عمل جيد! راجع بعض المفاهيم لتحسين درجاتك.';
+            } else {
+                feedback = 'Try again! Focus on reviewing the key concepts. | حاول مرة أخرى! ركز على مراجعة المفاهيم الأساسية.';
+            }
+            document.getElementById('quiz-feedback').textContent = feedback;
+            document.getElementById('submit-quiz').disabled = true;
+        }
+
+        function resetQuiz() {
+            localStorage.removeItem('electrostaticChargeQuizAnswers');
+            score = 0;
+            answeredQuestions.clear();
+            for (let i = 1; i <= totalQuestions; i++) {
+                document.getElementById(`feedback-${i}`).textContent = '';
+                const options = document.getElementById(`options-${i}`).getElementsByClassName('mcq-option');
+                const nextButton = document.getElementById(`mcq-${i}`).querySelector('.next-button');
+                for (let option of options) {
+                    option.classList.remove('selected-correct', 'selected-incorrect');
+                }
+                if (nextButton) {
+                    nextButton.classList.add('hidden');
+                }
+            }
+            document.getElementById('progress').textContent = '0';
+            document.getElementById('score').textContent = '0';
+            document.getElementById('percentage').textContent = '0';
+            document.getElementById('progress-bar-fill').style.width = '0%';
+            document.getElementById('quiz-feedback').textContent = '';
+            document.getElementById('submit-quiz').disabled = false;
+        }
+
+        // Theme Toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            themeToggle.textContent = document.body.classList.contains('dark-mode') ? 'Light Mode' : 'Dark Mode';
+        });
+
+        // Submit Quiz
+        document.getElementById('submit-quiz').addEventListener('click', submitQuiz);
+
+        // Reset Quiz
+        document.getElementById('reset-quiz').addEventListener('click', resetQuiz);
+
+        // Keyboard Navigation
+        document.querySelectorAll('.mcq-option').forEach(option => {
+            option.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    option.click();
+                }
+            });
+        });
+
+        // Load saved progress on page load
+        window.onload = loadProgress;
+    </script>
+</body>
+</html>

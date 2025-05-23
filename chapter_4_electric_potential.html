@@ -1,0 +1,613 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 4: Electric Potential | الفصل الرابع: الجهد الكهربائي</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- MathJax for rendering equations -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <!-- JSConfetti for celebration animation -->
+    <script src="https://cdn.jsdelivr.net/npm/js-confetti@latest/dist/js-confetti.browser.js"></script>
+    <style>
+        body {
+            background-image: url('https://www.transparenttextures.com/patterns/circuit.png');
+            background-color: #f0f4f8;
+            transition: background-color 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        }
+        .dark-mode {
+            background-color: #1f2937;
+            color: #e5e7eb;
+        }
+        .dark-mode .bg-white {
+            background-color: #374151;
+        }
+        .dark-mode .bg-blue-50 {
+            background-color: #4b5563;
+        }
+        .dark-mode .text-blue-900 {
+            color: #93c5fd;
+        }
+        .dark-mode .text-gray-800 {
+            color: #d1d5db;
+        }
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .mcq-option {
+            padding: 10px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        .mcq-option:hover {
+            background-color: #e2e8f0;
+            cursor: pointer;
+            transform: scale(1.02);
+        }
+        .dark-mode .mcq-option:hover {
+            background-color: #4b5563;
+        }
+        .selected-correct {
+            background-color: #d1fae5;
+            border: 2px solid #15803d;
+            font-weight: 600;
+        }
+        .selected-incorrect {
+            background-color: #fee2e2;
+            border: 2px solid #b91c1c;
+            font-weight: 600;
+        }
+        .correct {
+            color: #15803d;
+            font-weight: bold;
+        }
+        .incorrect {
+            color: #b91c1c;
+            font-weight: bold;
+        }
+        .correct-answer {
+            color: #1d4ed8;
+            font-weight: bold;
+        }
+        .fade-in {
+            animation: fadeIn 1s ease-in-out;
+        }
+        .fade-in-feedback {
+            animation: fadeInFeedback 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeInFeedback {
+            0% { opacity: 0; transform: translateY(5px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 220px;
+            background-color: #1f2937;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -110px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        .progress-bar {
+            height: 12px;
+            background-color: #e5e7eb;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background-color: #3b82f6;
+            transition: width 0.3s ease;
+        }
+        .charge-icon::before {
+            content: '⚡️';
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        .next-button {
+            transition: all 0.2s ease;
+        }
+        .next-button:hover {
+            transform: translateX(4px);
+        }
+        .resource-link:hover {
+            text-decoration: underline;
+            color: #1d4ed8;
+        }
+        .dark-mode .resource-link:hover {
+            color: #93c5fd;
+        }
+    </style>
+</head>
+<body class="font-sans text-gray-800">
+    <!-- Header -->
+    <header class="bg-blue-900 text-white py-4 sticky-header">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold">Physics: Electric Potential | الفيزياء: الجهد الكهربائي</h1>
+            <nav class="flex items-center space-x-4">
+                <a href="#explanation" class="px-2 hover:underline" aria-label="Jump to Explanation Section">Explanation | الشرح</a>
+                <a href="#resources" class="px-2 hover:underline" aria-label="Jump to Resources Section">Resources | الموارد</a>
+                <a href="#mcqs" class="px-2 hover:underline" aria-label="Jump to MCQs Section">MCQs | الأسئلة</a>
+                <button id="theme-toggle" class="px-2 py-1 bg-blue-700 rounded hover:bg-blue-600" aria-label="Toggle Dark Mode">Dark Mode</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8">
+        <section id="explanation" class="bg-white rounded-lg shadow-lg p-6 mb-8 fade-in">
+            <h2 class="text-3xl font-semibold text-blue-900 mb-4 charge-icon">Chapter 4: Electric Potential | الفصل الرابع: الجهد الكهربائي</h2>
+            <p class="mb-4">Electric potential is a scalar quantity that describes the potential energy per unit charge at a point in an electric field. It represents the work done to move a unit positive charge from infinity to that point without acceleration. This chapter covers the concepts of electric potential, potential difference, and potential energy, along with their applications.</p>
+            <p class="mb-4">الجهد الكهربائي هو كمية قياسية تصف الطاقة الكامنة لكل وحدة شحنة في نقطة في مجال كهربائي. يمثل العمل المبذول لنقل شحنة موجبة لكل وحدة من اللانهائية إلى تلك النقطة دون تسارع. يغطي هذا الفصل مفاهيم الجهد الكهربائي، فرق الجهد، والطاقة الكامنة، مع تطبيقاتها.</p>
+
+            <h3 class="text-2xl font-semibold text-gray-800 mb-3 charge-icon">Electric Potential Definition | تعريف الجهد الكهربائي</h3>
+            <p class="mb-2">The electric potential (\( V \)) at a point due to a point charge \( q \) at a distance \( r \) is given by:</p>
+            <p class="mb-2">الجهد الكهربائي (\( V \)) في نقطة بسبب شحنة نقطية \( q \) على مسافة \( r \) يُعطى بـ:</p>
+            <div class="bg-blue-50 p-4 rounded-lg text-center my-4">
+                \[ V = \frac{k q}{r} \]
+                <div class="tooltip"><span class="underline">k</span><span class="tooltip-text">ثابت كولوم: \( 9 \times 10^9 \, \text{N} \cdot \text{m}^2/\text{C}^2 \)</span></div>
+            </div>
+            <p>where \( k \) is Coulomb's constant (\( 9 \times 10^9 \, \text{N} \cdot \text{m}^2/\text{C}^2 \)), \( q \) is the charge, and \( r \) is the distance. The unit of electric potential is the Volt (V).</p>
+            <p>حيث \( k \) هو ثابت كولوم (\( 9 \times 10^9 \, \text{N} \cdot \text{m}^2/\text{C}^2 \))، \( q \) هي الشحنة، و\( r \) هي المسافة. وحدة الجهد الكهربائي هي الفولت (V).</p>
+
+            <h3 class="text-2xl font-semibold text-gray-800 mb-3 charge-icon">Potential Difference | فرق الجهد</h3>
+            <p class="mb-2">The potential difference (\( \Delta V \)) between two points \( a \) and \( b \) is the work done per unit charge to move a charge from \( a \) to \( b \):</p>
+            <p class="mb-2">فرق الجهد (\( \Delta V \)) بين نقطتين \( a \) و \( b \) هو العمل المبذول لكل وحدة شحنة لنقل شحنة من \( a \) إلى \( b \):</p>
+            <div class="bg-blue-50 p-4 rounded-lg text-center my-4">
+                \[ \Delta V = V_b - V_a = -\int_a^b \mathbf{E} \cdot d\mathbf{l} \]
+            </div>
+            <p>The unit of potential difference is also the Volt (V).</p>
+            <p>وحدة فرق الجهد هي أيضًا الفولت (V).</p>
+
+            <h3 class="text-2xl font-semibold text-gray-800 mb-3 charge-icon">Electric Potential Energy | الطاقة الكامنة الكهربائية</h3>
+            <p class="mb-2">The electric potential energy (\( U \)) of a charge \( q \) at a point with potential \( V \) is:</p>
+            <p class="mb-2">الطاقة الكامنة الكهربائية (\( U \)) لشحنة \( q \) في نقطة بجهد \( V \) هي:</p>
+            <div class="bg-blue-50 p-4 rounded-lg text-center my-4">
+                \[ U = q V \]
+            </div>
+            <p>For two point charges \( q_1 \) and \( q_2 \) separated by a distance \( r \), the potential energy is:</p>
+            <p>بالنسبة لشحنتين نقطيتين \( q_1 \) و \( q_2 \) مفصولتين بمسافة \( r \)، الطاقة الكامنة هي:</p>
+            <div class="bg-blue-50 p-4 rounded-lg text-center my-4">
+                \[ U = k \frac{q_1 q_2}{r} \]
+            </div>
+
+            <h3 class="text-2xl font-semibold text-gray-800 mb-3 charge-icon">Relation to Electric Field | العلاقة بالمجال الكهربائي</h3>
+            <p class="mb-2">The electric field \( \mathbf{E} \) is related to the electric potential \( V \) by:</p>
+            <p class="mb-2">المجال الكهربائي \( \mathbf{E} \) مرتبط بالجهد الكهربائي \( V \) بـ:</p>
+            <div class="bg-blue-50 p-4 rounded-lg text-center my-4">
+                \[ \mathbf{E} = -\nabla V \]
+            </div>
+            <p>In one dimension, \( E = -\frac{dV}{dx} \), indicating that the electric field points in the direction of decreasing potential.</p>
+            <p>في بعد واحد، \( E = -\frac{dV}{dx} \)، مما يشير إلى أن المجال الكهربائي يتجه في اتجاه انخفاض الجهد.</p>
+
+            <h3 class="text-2xl font-semibold text-gray-800 mb-3 charge-icon">Equipotential Surfaces | الأسطح متساوية الجهد</h3>
+            <p class="mb-2">Equipotential surfaces are surfaces where the electric potential is constant. They are always perpendicular to electric field lines.</p>
+            <p class="mb-2">الأسطح متساوية الجهد هي أسطح يكون الجهد الكهربائي فيها ثابتًا. تكون دائمًا متعامدة على خطوط المجال الكهربائي.</p>
+        </section>
+
+        <!-- Resources Section -->
+        <section id="resources" class="bg-white rounded-lg shadow-lg p-6 mb-8 fade-in">
+            <h2 class="text-3xl font-semibold text-blue-900 mb-4 charge-icon">Resources | الموارد</h2>
+            <p class="mb-4">Explore additional materials to deepen your understanding of Electric Potential.</p>
+            <p class="mb-4">استكشف مواد إضافية لتعميق فهمك للجهد الكهربائي.</p>
+            <ul class="space-y-2">
+                <li>
+                    <span class="inline-block mr-2">📄</span>
+                    <a href="https://drive.google.com/file/d/16rjBGnZHNgitC-fM8HW64N-Lc0PwIUCj/view?usp=drivesdk" target="_blank" class="resource-link text-blue-600">Summary | ملخص الفصل الرابع</a>
+                </li>
+                <li>
+                    <span class="inline-block mr-2">🎥</span>
+                    <a href="https://youtu.be/8eL88iA3vAs" target="_blank" class="resource-link text-blue-600">Video: Introduction to Electric Potential | فيديو: مقدمة عن الجهد الكهربائي</a>
+                </li>
+                <li>
+                    <span class="inline-block mr-2">🎥</span>
+                    <a href="https://youtu.be/2y2vW0SDVok" target="_blank" class="resource-link text-blue-600">Video: Potential Due to a Point Charge | فيديو: الجهد الناتج عن شحنة نقطية</a>
+                </li>
+                <li>
+                    <span class="inline-block mr-2">🎥</span>
+                    <a href="https://youtu.be/7QbSn6t0C6Q" target="_blank" class="resource-link text-blue-600">Video: Potential Difference | فيديو: فرق الجهد</a>
+                </li>
+                <li>
+                    <span class="inline-block mr-2">🎥</span>
+                    <a href="https://youtu.be/5n8kS0cX8pI" target="_blank" class="resource-link text-blue-600">Video: Potential Energy | فيديو: الطاقة الكامنة</a>
+                </li>
+                <li>
+                    <span class="inline-block mr-2">🎥</span>
+                    <a href="https://youtu.be/8oTKBgEV7kU" target="_blank" class="resource-link text-blue-600">Video: Equipotential Surfaces | فيديو: الأسطح متساوية الجهد</a>
+                </li>
+                <li>
+                    <span class="inline-block mr-2">🎥</span>
+                    <a href="https://youtu.be/9z3k2H5a7qE" target="_blank" class="resource-link text-blue-600">Video: Potential Gradient | فيديو: التدرج في الجهد</a>
+                </li>
+            </ul>
+        </section>
+
+        <section id="mcqs" class="bg-white rounded-lg shadow-lg p-6 fade-in">
+            <h2 class="text-3xl font-semibold text-blue-900 mb-4 charge-icon">Multiple Choice Questions (MCQs) | أسئلة الاختيار المتعدد</h2>
+            <div class="mb-6">
+                <p class="font-semibold">Progress: <span id="progress">0</span>/10</p>
+                <div class="progress-bar">
+                    <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%;"></div>
+                </div>
+                <p class="font-semibold mt-2">Score: <span id="score">0</span>/10 (<span id="percentage">0</span>%)</p>
+                <p id="quiz-feedback" class="mt-2 font-semibold text-lg"></p>
+                <div class="mt-4 flex space-x-2">
+                    <button id="submit-quiz" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition" aria-label="Submit Quiz">Submit Quiz | إرسال الاختبار</button>
+                    <button id="reset-quiz" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition" aria-label="Reset Quiz">Reset Quiz | إعادة الاختبار</button>
+                </div>
+            </div>
+            <div class="space-y-8">
+                <div class="mcq" id="mcq-1">
+                    <p class="font-semibold text-lg">1. What is the electric potential due to a point charge \( q \) at a distance \( r \)? | ما هو الجهد الكهربائي الناتج عن شحنة نقطية \( q \) على مسافة \( r \)?</p>
+                    <div class="options space-y-2" id="options-1">
+                        <p class="mcq-option" onclick="selectAnswer(1, 'A')" role="button" tabindex="0">A) \( V = k \frac{q}{r^2} \) | \( V = k \frac{q}{r^2} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(1, 'B')" role="button" tabindex="0">B) \( V = k \frac{q}{r} \) | \( V = k \frac{q}{r} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(1, 'C')" role="button" tabindex="0">C) \( V = k \frac{r}{q} \) | \( V = k \frac{r}{q} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(1, 'D')" role="button" tabindex="0">D) \( V = k q r \) | \( V = k q r \)</p>
+                    </div>
+                    <p id="feedback-1" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(2)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-2">
+                    <p class="font-semibold text-lg">2. The unit of electric potential is: | وحدة الجهد الكهربائي هي:</p>
+                    <div class="options space-y-2" id="options-2">
+                        <p class="mcq-option" onclick="selectAnswer(2, 'A')" role="button" tabindex="0">A) Joule | جول</p>
+                        <p class="mcq-option" onclick="selectAnswer(2, 'B')" role="button" tabindex="0">B) Volt | فولت</p>
+                        <p class="mcq-option" onclick="selectAnswer(2, 'C')" role="button" tabindex="0">C) Coulomb | كولوم</p>
+                        <p class="mcq-option" onclick="selectAnswer(2, 'D')" role="button" tabindex="0">D) Newton | نيوتن</p>
+                    </div>
+                    <p id="feedback-2" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(3)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-3">
+                    <p class="font-semibold text-lg">3. If the distance from a point charge is doubled, the electric potential at that point: | إذا تضاعفت المسافة من شحنة نقطية، فإن الجهد الكهربائي في تلك النقطة:</p>
+                    <div class="options space-y-2" id="options-3">
+                        <p class="mcq-option" onclick="selectAnswer(3, 'A')" role="button" tabindex="0">A) Doubles | يتضاعف</p>
+                        <p class="mcq-option" onclick="selectAnswer(3, 'B')" role="button" tabindex="0">B) Halves | ينخفض إلى النصف</p>
+                        <p class="mcq-option" onclick="selectAnswer(3, 'C')" role="button" tabindex="0">C) Quadruples | يتضاعف أربع مرات</p>
+                        <p class="mcq-option" onclick="selectAnswer(3, 'D')" role="button" tabindex="0">D) Decreases by a factor of 4 | ينخفض بمعامل 4</p>
+                    </div>
+                    <p id="feedback-3" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(4)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-4">
+                    <p class="font-semibold text-lg">4. The potential energy of a charge \( q \) in a potential \( V \) is given by: | الطاقة الكامنة لشحنة \( q \) في جهد \( V \) تُعطى بـ:</p>
+                    <div class="options space-y-2" id="options-4">
+                        <p class="mcq-option" onclick="selectAnswer(4, 'A')" role="button" tabindex="0">A) \( U = q / V \) | \( U = q / V \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(4, 'B')" role="button" tabindex="0">B) \( U = q V \) | \( U = q V \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(4, 'C')" role="button" tabindex="0">C) \( U = V / q \) | \( U = V / q \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(4, 'D')" role="button" tabindex="0">D) \( U = k q V \) | \( U = k q V \)</p>
+                    </div>
+                    <p id="feedback-4" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(5)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-5">
+                    <p class="font-semibold text-lg">5. Equipotential surfaces are: | الأسطح متساوية الجهد هي:</p>
+                    <div class="options space-y-2" id="options-5">
+                        <p class="mcq-option" onclick="selectAnswer(5, 'A')" role="button" tabindex="0">A) Parallel to electric field lines | موازية لخطوط المجال الكهربائي</p>
+                        <p class="mcq-option" onclick="selectAnswer(5, 'B')" role="button" tabindex="0">B) Perpendicular to electric field lines | متعامدة على خطوط المجال الكهربائي</p>
+                        <p class="mcq-option" onclick="selectAnswer(5, 'C')" role="button" tabindex="0">C) Circular around a point charge | دائرية حول شحنة نقطية</p>
+                        <p class="mcq-option" onclick="selectAnswer(5, 'D')" role="button" tabindex="0">D) Non-existent | غير موجودة</p>
+                    </div>
+                    <p id="feedback-5" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(6)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-6">
+                    <p class="font-semibold text-lg">6. The electric field is related to the potential by: | المجال الكهربائي مرتبط بالجهد بـ:</p>
+                    <div class="options space-y-2" id="options-6">
+                        <p class="mcq-option" onclick="selectAnswer(6, 'A')" role="button" tabindex="0">A) \( E = V \) | \( E = V \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(6, 'B')" role="button" tabindex="0">B) \( E = \frac{dV}{dx} \) | \( E = \frac{dV}{dx} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(6, 'C')" role="button" tabindex="0">C) \( E = -\frac{dV}{dx} \) | \( E = -\frac{dV}{dx} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(6, 'D')" role="button" tabindex="0">D) \( E = k V \) | \( E = k V \)</p>
+                    </div>
+                    <p id="feedback-6" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(7)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-7">
+                    <p class="font-semibold text-lg">7. The potential energy between two point charges \( q_1 \) and \( q_2 \) separated by a distance \( r \) is: | الطاقة الكامنة بين شحنتين نقطيتين \( q_1 \) و \( q_2 \) مفصولتين بمسافة \( r \) هي:</p>
+                    <div class="options space-y-2" id="options-7">
+                        <p class="mcq-option" onclick="selectAnswer(7, 'A')" role="button" tabindex="0">A) \( U = k \frac{q_1 q_2}{r^2} \) | \( U = k \frac{q_1 q_2}{r^2} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(7, 'B')" role="button" tabindex="0">B) \( U = k \frac{q_1 q_2}{r} \) | \( U = k \frac{q_1 q_2}{r} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(7, 'C')" role="button" tabindex="0">C) \( U = k \frac{q_1 + q_2}{r} \) | \( U = k \frac{q_1 + q_2}{r} \)</p>
+                        <p class="mcq-option" onclick="selectAnswer(7, 'D')" role="button" tabindex="0">D) \( U = k q_1 q_2 r \) | \( U = k q_1 q_2 r \)</p>
+                    </div>
+                    <p id="feedback-7" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(8)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-8">
+                    <p class="font-semibold text-lg">8. The work done to move a charge between two points on an equipotential surface is: | العمل المبذول لنقل شحنة بين نقطتين على سطح متساوي الجهد هو:</p>
+                    <div class="options space-y-2" id="options-8">
+                        <p class="mcq-option" onclick="selectAnswer(8, 'A')" role="button" tabindex="0">A) Infinite | لا نهائي</p>
+                        <p class="mcq-option" onclick="selectAnswer(8, 'B')" role="button" tabindex="0">B) Zero | صفر</p>
+                        <p class="mcq-option" onclick="selectAnswer(8, 'C')" role="button" tabindex="0">C) Equal to the potential difference | يساوي فرق الجهد</p>
+                        <p class="mcq-option" onclick="selectAnswer(8, 'D')" role="button" tabindex="0">D) Proportional to the charge | يتناسب مع الشحنة</p>
+                    </div>
+                    <p id="feedback-8" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(9)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-9">
+                    <p class="font-semibold text-lg">9. If the potential due to a point charge is 100 V at a distance of 2 m, what is the potential at 4 m? | إذا كان الجهد الناتج عن شحنة نقطية 100 فولت على مسافة 2 متر، فما هو الجهد على مسافة 4 أمتار؟</p>
+                    <div class="options space-y-2" id="options-9">
+                        <p class="mcq-option" onclick="selectAnswer(9, 'A')" role="button" tabindex="0">A) 200 V | 200 فولت</p>
+                        <p class="mcq-option" onclick="selectAnswer(9, 'B')" role="button" tabindex="0">B) 100 V | 100 فولت</p>
+                        <p class="mcq-option" onclick="selectAnswer(9, 'C')" role="button" tabindex="0">C) 50 V | 50 فولت</p>
+                        <p class="mcq-option" onclick="selectAnswer(9, 'D')" role="button" tabindex="0">D) 25 V | 25 فولت</p>
+                    </div>
+                    <p id="feedback-9" class="mt-3 fade-in-feedback"></p>
+                    <button class="next-button hidden mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="scrollToNext(10)" aria-label="Go to Next Question">Next | التالي</button>
+                </div>
+                <div class="mcq" id="mcq-10">
+                    <p class="font-semibold text-lg">10. The potential difference between two points is 10 V. The work done to move a 2 C charge between these points is: | فرق الجهد بين نقطتين هو 10 فولت. العمل المبذول لنقل شحنة 2 كولوم بين هاتين النقطتين هو:</p>
+                    <div class="options space-y-2" id="options-10">
+                        <p class="mcq-option" onclick="selectAnswer(10, 'A')" role="button" tabindex="0">A) 5 J | 5 جول</p>
+                        <p class="mcq-option" onclick="selectAnswer(10, 'B')" role="button" tabindex="0">B) 10 J | 10 جول</p>
+                        <p class="mcq-option" onclick="selectAnswer(10, 'C')" role="button" tabindex="0">C) 20 J | 20 جول</p>
+                        <p class="mcq-option" onclick="selectAnswer(10, 'D')" role="button" tabindex="0">D) 40 J | 40 جول</p>
+                    </div>
+                    <p id="feedback-10" class="mt-3 fade-in-feedback"></p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-blue-900 text-white py-4">
+        <div class="container mx-auto px-4 text-center">
+            <p>Learn more about physics at <a href="https://www.physicsclassroom.com/" class="underline hover:text-blue-300" aria-label="Visit The Physics Classroom">The Physics Classroom</a></p>
+            <p>© 2025 Physics Education. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript for Grading System and Interactivity -->
+    <script>
+        const jsConfetti = new JSConfetti();
+        let score = 0;
+        let answeredQuestions = new Set();
+        const totalQuestions = 10;
+        const correctAnswers = {
+            1: 'B',
+            2: 'B',
+            3: 'B',
+            4: 'B',
+            5: 'B',
+            6: 'C',
+            7: 'B',
+            8: 'B',
+            9: 'C',
+            10: 'C'
+        };
+        const explanations = {
+            1: 'The electric potential due to a point charge is given by \( V = k \frac{q}{r} \). | الجهد الكهربائي الناتج عن شحنة نقطية يُعطى بـ \( V = k \frac{q}{r} \).',
+            2: 'The unit of electric potential is the Volt (V), defined as Joule per Coulomb. | وحدة الجهد الكهربائي هي الفولت (V)، وتُعرف بأنها جول لكل كولوم.',
+            3: 'Since \( V \propto \\frac{1}{r} \), doubling the distance halves the potential. | بما أن \( V \propto \\frac{1}{r} \)، فإن مضاعفة المسافة يقلل الجهد إلى النصف.',
+            4: 'The potential energy is given by \( U = q V \). | الطاقة الكامنة تُعطى بـ \( U = q V \).',
+            5: 'Equipotential surfaces are perpendicular to electric field lines because no work is done moving a charge along them. | الأسطح متساوية الجهد متعامدة على خطوط المجال الكهربائي لأنه لا يُبذل عمل عند نقل شحنة على طولها.',
+            6: 'The electric field is the negative gradient of the potential, \( E = -\\frac{dV}{dx} \). | المجال الكهربائي هو التدرج السالب للجهد، \( E = -\\frac{dV}{dx} \).',
+            7: 'The potential energy between two charges is \( U = k \\frac{q_1 q_2}{r} \). | الطاقة الكامنة بين شحنتين هي \( U = k \\frac{q_1 q_2}{r} \).',
+            8: 'No work is done to move a charge on an equipotential surface since the potential is constant (\( \Delta V = 0 \)). | لا يُبذل عمل لنقل شحنة على سطح متساوي الجهد لأن الجهد ثابت (\( \Delta V = 0 \)).',
+            9: 'Since \( V \propto \\frac{1}{r} \), doubling the distance from 2 m to 4 m reduces the potential from 100 V to \( \\frac{100}{2} = 50 \) V. | بما أن \( V \propto \\frac{1}{r} \)، فإن مضاعفة المسافة من 2 م إلى 4 م تقلل الجهد من 100 فولت إلى \( \\frac{100}{2} = 50 \) فولت.',
+            10: 'The work done is \( W = q \Delta V = 2 \times 10 = 20 \) J. | العمل المبذول هو \( W = q \Delta V = 2 \times 10 = 20 \) جول.'
+        };
+        const correctAnswerText = {
+            1: 'B) \( V = k \\frac{q}{r} \) | \( V = k \\frac{q}{r} \)',
+            2: 'B) Volt | فولت',
+            3: 'B) Halves | ينخفض إلى النصف',
+            4: 'B) \( U = q V \) | \( U = q V \)',
+            5: 'B) Perpendicular to electric field lines | متbeer على خطوط المجال الكهربائي',
+            6: 'C) \( E = -\\frac{dV}{dx} \) | \( E = -\\frac{dV}{dx} \)',
+            7: 'B) \( U = k \\frac{q_1 q_2}{r} \) | \( U = k \\frac{q_1 q_2}{r} \)',
+            8: 'B) Zero | صفر',
+            9: 'C) 50 V | 50 فولت',
+            10: 'C) 20 J | 20 جول'
+        };
+
+        // Load saved progress
+        function loadProgress() {
+            const savedAnswers = JSON.parse(localStorage.getItem('electricPotentialQuizAnswers')) || {};
+            score = 0;
+            answeredQuestions = new Set();
+            Object.keys(savedAnswers).forEach(qNum => {
+                const questionNumber = parseInt(qNum);
+                const selectedOption = savedAnswers[qNum];
+                answeredQuestions.add(questionNumber);
+                const feedbackElement = document.getElementById(`feedback-${questionNumber}`);
+                const options = document.getElementById(`options-${questionNumber}`).getElementsByClassName('mcq-option');
+                const nextButton = document.getElementById(`mcq-${questionNumber}`).querySelector('.next-button');
+                for (let option of options) {
+                    if (option.textContent.startsWith(selectedOption + ')')) {
+                        option.classList.add(selectedOption === correctAnswers[questionNumber] ? 'selected-correct' : 'selected-incorrect');
+                    }
+                }
+                if (selectedOption === correctAnswers[questionNumber]) {
+                    score++;
+                    feedbackElement.innerHTML = `<span class="correct">Correct! | صحيح!</span> ${explanations[questionNumber]}`;
+                } else {
+                    feedbackElement.innerHTML = `<span class="incorrect">Incorrect. | غير صحيح.</span> The correct answer is: <span class="correct-answer">${correctAnswerText[questionNumber]}</span>. ${explanations[questionNumber]}`;
+                }
+                if (nextButton && questionNumber < totalQuestions) {
+                    nextButton.classList.remove('hidden');
+                }
+            });
+            updateProgress();
+        }
+
+        function selectAnswer(questionNumber, selectedOption) {
+            if (answeredQuestions.has(questionNumber)) return; // Prevent answering twice
+            answeredQuestions.add(questionNumber);
+            const feedbackElement = document.getElementById(`feedback-${questionNumber}`);
+            const options = document.getElementById(`options-${questionNumber}`).getElementsByClassName('mcq-option');
+            const nextButton = document.getElementById(`mcq-${questionNumber}`).querySelector('.next-button');
+            for (let option of options) {
+                if (option.textContent.startsWith(selectedOption + ')')) {
+                    option.classList.add(selectedOption === correctAnswers[questionNumber] ? 'selected-correct' : 'selected-incorrect');
+                }
+            }
+            if (selectedOption === correctAnswers[questionNumber]) {
+                score++;
+                feedbackElement.innerHTML = `<span class="correct">Correct! | صحيح!</span> ${explanations[questionNumber]}`;
+            } else {
+                feedbackElement.innerHTML = `<span class="incorrect">Incorrect. | غير صحيح.</span> The correct answer is: <span class="correct-answer">${correctAnswerText[questionNumber]}</span>. ${explanations[questionNumber]}`;
+            }
+            if (nextButton && questionNumber < totalQuestions) {
+                nextButton.classList.remove('hidden');
+            }
+            localStorage.setItem('electricPotentialQuizAnswers', JSON.stringify({
+                ...JSON.parse(localStorage.getItem('electricPotentialQuizAnswers') || '{}'),
+                [questionNumber]: selectedOption
+            }));
+            updateProgress();
+        }
+
+        function scrollToNext(questionNumber) {
+            const nextMcq = document.getElementById(`mcq-${questionNumber}`);
+            if (nextMcq) {
+                nextMcq.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function updateProgress() {
+            const progress = answeredQuestions.size;
+            const percentage = Math.round((score / totalQuestions) * 100);
+            document.getElementById('progress').textContent = progress;
+            document.getElementById('score').textContent = score;
+            document.getElementById('percentage').textContent = percentage;
+            document.getElementById('progress-bar-fill').style.width = `${(progress / totalQuestions) * 100}%`;
+        }
+
+        function submitQuiz() {
+            if (answeredQuestions.size < totalQuestions) {
+                document.getElementById('quiz-feedback').textContent = 'Please answer all questions before submitting. | الرجاء الإجابة على جميع الأسئلة قبل الإرسال.';
+                return;
+            }
+            const percentage = Math.round((score / totalQuestions) * 100);
+            let feedback;
+            if (percentage >= 80) {
+                feedback = 'Excellent! You have a strong grasp of electric potential. | ممتاز! لديك فهم قوي للجهد الكهربائي.';
+                jsConfetti.addConfetti();
+            } else if (percentage >= 50) {
+                feedback = 'Good job! Review some concepts to improve. | عمل جيد! راجع بعض المفاهيم لتحسين درجاتك.';
+            } else {
+                feedback = 'Try again! Focus on reviewing the key concepts. | حاول مرة أخرى! ركز على مراجعة المفاهيم الأساسية.';
+            }
+            document.getElementById('quiz-feedback').textContent = feedback;
+            document.getElementById('submit-quiz').disabled = true;
+        }
+
+        function resetQuiz() {
+            localStorage.removeItem('electricPotentialQuizAnswers');
+            score = 0;
+            answeredQuestions.clear();
+            for (let i = 1; i <= totalQuestions; i++) {
+                document.getElementById(`feedback-${i}`).textContent = '';
+                const options = document.getElementById(`options-${i}`).getElementsByClassName('mcq-option');
+                const nextButton = document.getElementById(`mcq-${i}`).querySelector('.next-button');
+                for (let option of options) {
+                    option.classList.remove('selected-correct', 'selected-incorrect');
+                }
+                if (nextButton) {
+                    nextButton.classList.add('hidden');
+                }
+            }
+            document.getElementById('progress').textContent = '0';
+            document.getElementById('score').textContent = '0';
+            document.getElementById('percentage').textContent = '0';
+            document.getElementById('progress-bar-fill').style.width = '0%';
+            document.getElementById('quiz-feedback').textContent = '';
+            document.getElementById('submit-quiz').disabled = false;
+        }
+
+        // Theme Toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            themeToggle.textContent = document.body.classList.contains('dark-mode') ? 'Light Mode' : 'Dark Mode';
+        });
+
+        // Submit Quiz
+        document.getElementById('submit-quiz').addEventListener('click', submitQuiz);
+
+        // Reset Quiz
+        document.getElementById('reset-quiz').addEventListener('click', resetQuiz);
+
+        // Keyboard Navigation
+        document.querySelectorAll('.mcq-option').forEach(option => {
+            option.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    option.click();
+                }
+            });
+        });
+
+        // Load saved progress on page load
+        window.onload = loadProgress;
+    </script>
+</body>
+</html>
